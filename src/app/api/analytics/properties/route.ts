@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 // import { google } from 'googleapis' // TODO: Implement real Google Analytics API
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as any // eslint-disable-line @typescript-eslint/no-explicit-any
     
     if (!session?.user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })

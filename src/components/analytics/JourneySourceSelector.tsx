@@ -17,7 +17,7 @@ export default function JourneySourceSelector({
   className = ''
 }: JourneySourceSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const availableSources = getAvailableJourneySources(propertyName)
+  const availableSources = getAvailableJourneySources()
   
   const selectedSourceData = availableSources.find(source => source.id === selectedSource)
 

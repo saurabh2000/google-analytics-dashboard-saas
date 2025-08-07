@@ -385,7 +385,7 @@ export class AlertEvaluator {
       case 'conversion_rate':
         return this.calculateConversionRate(data)
       case 'bounce_rate':
-        return this.calculateBounceRate(data)
+        return this.calculateBounceRate()
       case 'avg_session_duration':
         return this.parseSessionDuration(data.avgSessionDuration?.total || '0s')
       default:

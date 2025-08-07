@@ -90,10 +90,11 @@ export default function Dashboard() {
   // Initialize collaboration when user is authenticated
   useEffect(() => {
     if (session?.user && !collaborationConnected) {
-      const dashboardId = `dashboard-${session.user.id || 'anonymous'}`
+      const sessionWithId = session as any // eslint-disable-line @typescript-eslint/no-explicit-any
+      const dashboardId = `dashboard-${sessionWithId.user.id || 'anonymous'}`
       
       collaborationManager.connect({
-        id: session.user.id || Date.now().toString(),
+        id: sessionWithId.user.id || Date.now().toString(),
         name: session.user.name || 'Anonymous User',
         email: session.user.email || 'anonymous@example.com',
         avatar: session.user.image || undefined

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as any // eslint-disable-line @typescript-eslint/no-explicit-any
     
     if (!session || !session.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (data.rows && data.rows.length > 0) {
-      data.rows.slice(0, 5).forEach((row: any[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      data.rows.slice(0, 5).forEach((row: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
         const pagePath = row.dimensionValues[0].value
         const pageTitle = row.dimensionValues[1].value
         const pageViews = parseInt(row.metricValues[0].value || '0')

@@ -96,7 +96,7 @@ export default function CustomizationPanel({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {availableCards.map((card) => {
               const isEnabled = tempEnabledCards.includes(card.id)
-              const colorClasses = {
+              const colorClassMap: Record<string, string> = {
                 blue: 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300',
                 green: 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300',
                 purple: 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300',
@@ -106,7 +106,8 @@ export default function CustomizationPanel({
                 indigo: 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300',
                 teal: 'bg-teal-100 dark:bg-teal-900 text-teal-600 dark:text-teal-300',
                 pink: 'bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300'
-              }[card.color as keyof typeof colorClasses]
+              }
+              const colorClasses = colorClassMap[card.color] || colorClassMap.blue
 
               return (
                 <label
