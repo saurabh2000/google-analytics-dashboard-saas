@@ -17,6 +17,11 @@ let io: Server | null = null
 function initializeSocket() {
   if (io) return io
 
+  // Don't initialize during build time
+  if (!process.env.WS_PORT && process.env.NODE_ENV === 'production') {
+    return null
+  }
+
   // Create HTTP server for Socket.IO
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { createServer } = require('http')
@@ -205,6 +210,11 @@ function initializeSocket() {
 }
 
 export async function GET() {
+  // Don't start socket server during build/static generation
+  if (process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_ENV === 'production') {
+    return Response.json({ message: 'Socket.IO disabled in production build', status: 'disabled' })
+  }
+
   // Initialize Socket.IO server if not already done
   if (!io) {
     initializeSocket()
