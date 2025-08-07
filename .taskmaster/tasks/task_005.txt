@@ -1,0 +1,59 @@
+# Task ID: 5
+# Title: Build dashboard UI components
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Create reusable UI components for the dashboard using React and Tailwind CSS
+# Details:
+- Create layout components (Header, Sidebar, Container)
+- Build widget container component
+- Create date range picker
+- Implement drag-and-drop functionality
+- Build loading states and skeletons
+- Create error boundary components
+- Implement responsive design
+
+# Test Strategy:
+- Component unit tests
+- Visual regression tests
+- Accessibility testing
+- Responsive design testing
+- Cross-browser compatibility
+
+# Subtasks:
+## 1. Create base layout components [pending]
+### Dependencies: None
+### Description: Implement core layout components including Header, Sidebar, and main Container with responsive design
+### Details:
+Create Header.tsx with app logo, navigation, and user menu. Build Sidebar.tsx with collapsible navigation and theme toggle. Implement Container.tsx with grid layout system. Use Tailwind CSS for styling and responsive breakpoints.
+
+## 2. Implement widget container component [pending]
+### Dependencies: 5.1
+### Description: Build reusable widget container with configuration options and placeholder states
+### Details:
+Create WidgetContainer.tsx with configurable width/height, header with title and actions, content area with overflow handling, and loading/error states. Implement widget resize handles and basic styling.
+
+## 3. Build date range picker component [pending]
+### Dependencies: 5.1
+### Description: Create custom date range picker with preset options and range validation
+### Details:
+Implement DateRangePicker.tsx using react-datepicker as base. Add preset ranges (7D, 30D, etc.), custom range selection, and range validation. Style with Tailwind CSS and ensure mobile compatibility.
+
+## 4. Implement drag-and-drop functionality [pending]
+### Dependencies: 5.1, 5.2
+### Description: Add drag-and-drop capability for widget repositioning using react-dnd
+### Details:
+Set up react-dnd provider, implement drag sources and drop targets, add grid snapping, handle position updates, and save layout changes. Include visual feedback during drag operations.
+
+## 5. Create loading states and skeletons [pending]
+### Dependencies: 5.1, 5.2
+### Description: Build loading state components and skeleton screens for all dashboard elements
+### Details:
+Create Skeleton.tsx component with configurable dimensions and animation. Implement skeleton screens for widgets, lists, and data loading states. Use Tailwind CSS for styling animations.
+
+## 6. Implement error boundary components [pending]
+### Dependencies: 5.1, 5.2, 5.5
+### Description: Create error boundary components for graceful error handling across the dashboard
+### Details:
+Implement ErrorBoundary.tsx using React Error Boundary. Create fallback UI components for different error types. Add error reporting integration and retry mechanisms.
+

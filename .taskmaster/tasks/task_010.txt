@@ -1,0 +1,21 @@
+# Task ID: 10
+# Title: Develop user settings and profile management
+# Status: pending
+# Dependencies: 2, 3
+# Priority: medium
+# Description: Create user settings interface for profile, preferences, and API keys
+# Details:
+- Build profile management UI
+- Implement notification preferences
+- Add timezone settings
+- Create API key generation (Pro plan)
+- Build account deletion flow
+- Add data export options
+- Implement 2FA setup
+
+# Test Strategy:
+- Test profile updates
+- Verify preference persistence
+- Test API key functionality
+- Check data privacy features
+- Test account deletion

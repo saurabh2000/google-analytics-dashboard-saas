@@ -1,0 +1,757 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Set up Next.js project foundation",
+        "description": "Initialize Next.js 14+ project with TypeScript, App Router, and development tooling",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [],
+        "details": "- Create Next.js project with App Router\n- Configure TypeScript\n- Set up ESLint and Prettier\n- Configure Tailwind CSS\n- Set up folder structure (components, lib, hooks, types)\n- Configure environment variables\n- Set up Git repository",
+        "testStrategy": "- Verify build process works\n- Check TypeScript compilation\n- Ensure linting rules are applied\n- Test hot module replacement",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize Next.js project with TypeScript and App Router",
+            "description": "Create a new Next.js 14+ project using create-next-app with TypeScript and App Router configuration",
+            "dependencies": [],
+            "details": "Run 'npx create-next-app@latest' with TypeScript, App Router, and Tailwind CSS options. Verify package.json configuration and update next.config.js as needed. Test basic routing functionality.",
+            "status": "done",
+            "testStrategy": "Verify successful project creation, TypeScript compilation, and basic page routing"
+          },
+          {
+            "id": 2,
+            "title": "Configure development tools and linting",
+            "description": "Set up ESLint, Prettier, and VSCode configuration for consistent code formatting and quality",
+            "dependencies": [
+              "1.1"
+            ],
+            "details": "Install and configure ESLint with next/core-web-vitals. Add Prettier with appropriate rules. Create .eslintrc.json, .prettierrc, and .editorconfig files. Set up VSCode settings for format-on-save.",
+            "status": "done",
+            "testStrategy": "Run linting checks on sample files, verify auto-formatting works"
+          },
+          {
+            "id": 3,
+            "title": "Establish project folder structure and base components",
+            "description": "Create standardized folder structure and essential base components",
+            "dependencies": [
+              "1.1",
+              "1.2"
+            ],
+            "details": "Create folders: app/, components/, lib/, hooks/, types/, utils/. Add necessary type definitions. Create base layout components and common UI components. Set up barrel files for exports.",
+            "status": "done",
+            "testStrategy": "Verify folder structure matches requirements, test component imports"
+          },
+          {
+            "id": 4,
+            "title": "Set up environment configuration",
+            "description": "Configure environment variables and validation for different environments",
+            "dependencies": [
+              "1.1"
+            ],
+            "details": "Create .env.local, .env.development, and .env.example files. Set up environment variable validation using zod. Add documentation for environment setup. Configure loading of environment variables in next.config.js.",
+            "status": "done",
+            "testStrategy": "Test environment variable loading and validation in different environments"
+          },
+          {
+            "id": 5,
+            "title": "Initialize Git repository and deployment configuration",
+            "description": "Set up Git repository with proper configuration and prepare for deployment",
+            "dependencies": [
+              "1.1",
+              "1.2",
+              "1.3",
+              "1.4"
+            ],
+            "details": "Initialize Git repository, create .gitignore file, set up GitHub repository, configure branch protection rules, add README.md with project setup instructions, create initial commit with project structure.",
+            "status": "done",
+            "testStrategy": "Verify Git configuration, test clone and setup process using README instructions"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Implement Google OAuth authentication",
+        "description": "Set up NextAuth.js with Google OAuth provider for user authentication",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "details": "- Install and configure NextAuth.js\n- Set up Google OAuth credentials\n- Create authentication API routes\n- Implement sign-in/sign-out pages\n- Add session provider\n- Create auth middleware\n- Handle user sessions",
+        "testStrategy": "- Test OAuth flow end-to-end\n- Verify session persistence\n- Test sign-in/sign-out functionality\n- Check redirect flows\n- Test error handling",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up NextAuth.js and Google OAuth credentials",
+            "description": "Install NextAuth.js package and configure Google OAuth credentials in Google Cloud Console",
+            "dependencies": [],
+            "details": "Install NextAuth.js using npm/yarn, create project in Google Cloud Console, configure OAuth consent screen, generate client ID and secret, store credentials in environment variables",
+            "status": "done",
+            "testStrategy": "Verify environment variables are properly loaded, validate Google Cloud Console configuration"
+          },
+          {
+            "id": 2,
+            "title": "Implement NextAuth API routes and configuration",
+            "description": "Create NextAuth API routes and configure authentication options including Google provider",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "Create [...nextauth].js in pages/api/auth, configure Google provider with credentials, set up session strategy, implement callback handlers",
+            "status": "done",
+            "testStrategy": "Test API routes response, verify provider configuration, test session handling"
+          },
+          {
+            "id": 3,
+            "title": "Create sign-in/sign-out interface",
+            "description": "Implement user interface components for authentication actions",
+            "dependencies": [
+              "2.2"
+            ],
+            "details": "Create sign-in and sign-out buttons, implement sign-in/sign-out functions using NextAuth.js methods, handle authentication state, add loading states",
+            "status": "done",
+            "testStrategy": "Test UI components rendering, verify authentication state changes, test error handling"
+          },
+          {
+            "id": 4,
+            "title": "Implement SessionProvider and context",
+            "description": "Add SessionProvider wrapper and create authentication context for global state management",
+            "dependencies": [
+              "2.2"
+            ],
+            "details": "Wrap app with SessionProvider, implement authentication context, create hooks for accessing session data, handle session updates",
+            "status": "pending",
+            "testStrategy": "Test session persistence, verify context updates, test provider integration"
+          },
+          {
+            "id": 5,
+            "title": "Create authentication middleware and protected routes",
+            "description": "Implement middleware for protecting routes and handling authentication state",
+            "dependencies": [
+              "2.3",
+              "2.4"
+            ],
+            "details": "Create middleware for route protection, implement redirect logic for unauthenticated users, handle session expiration, add authentication checks to protected routes",
+            "status": "pending",
+            "testStrategy": "Test protected route access, verify redirects, test session expiration handling"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Create database schema and models",
+        "description": "Design and implement database schema using Prisma with PostgreSQL",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "details": "- Install and configure Prisma\n- Design database schema for users, subscriptions, dashboards\n- Create User model with Google OAuth fields\n- Create Subscription model\n- Create Dashboard and Widget models\n- Set up database migrations\n- Configure connection pooling",
+        "testStrategy": "- Test database connections\n- Verify migrations work correctly\n- Test CRUD operations\n- Check foreign key constraints\n- Performance testing for queries",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install and Configure Prisma with PostgreSQL",
+            "description": "Set up Prisma ORM with PostgreSQL database connection and configure development environment",
+            "dependencies": [],
+            "details": "Install Prisma CLI and client packages, initialize Prisma in project, configure PostgreSQL connection string in .env, set up development database, and verify connection",
+            "status": "done",
+            "testStrategy": "Test database connection, verify Prisma CLI commands work, check environment variables are properly loaded"
+          },
+          {
+            "id": 2,
+            "title": "Create User and Authentication Models",
+            "description": "Design and implement User model with Google OAuth fields and authentication-related schemas",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Create User model with fields: id, email, name, profile_image, google_id, created_at, updated_at. Add Account model for OAuth providers. Add Session model for user sessions",
+            "status": "done",
+            "testStrategy": "Verify model constraints, test relationships between User, Account, and Session models"
+          },
+          {
+            "id": 3,
+            "title": "Implement Subscription and Billing Models",
+            "description": "Create subscription and billing-related models with proper relationships",
+            "dependencies": [
+              "3.1",
+              "3.2"
+            ],
+            "details": "Create Subscription model with fields: id, user_id, plan_type, status, start_date, end_date, billing_cycle. Add Payment model for transaction history",
+            "status": "done",
+            "testStrategy": "Test subscription state transitions, verify billing calculations, check foreign key constraints"
+          },
+          {
+            "id": 4,
+            "title": "Design Dashboard and Widget Models",
+            "description": "Create models for dashboard configuration and widget management",
+            "dependencies": [
+              "3.2"
+            ],
+            "details": "Create Dashboard model with fields: id, user_id, name, layout, settings, created_at, updated_at. Add Widget model with fields: id, dashboard_id, type, configuration, position",
+            "status": "done",
+            "testStrategy": "Test dashboard-widget relationships, verify layout persistence, check widget configuration storage"
+          },
+          {
+            "id": 5,
+            "title": "Set Up Database Migrations",
+            "description": "Create and configure database migrations for all models",
+            "dependencies": [
+              "3.2",
+              "3.3",
+              "3.4"
+            ],
+            "details": "Generate initial migration, set up migration scripts, create seed data, implement rollback functionality, add migration to CI/CD pipeline",
+            "status": "pending",
+            "testStrategy": "Test migration up/down scripts, verify data integrity after migrations, check seed data loading"
+          },
+          {
+            "id": 6,
+            "title": "Implement Connection Pooling and Performance Optimization",
+            "description": "Configure database connection pooling and optimize query performance",
+            "dependencies": [
+              "3.5"
+            ],
+            "details": "Set up connection pooling configuration, implement query caching strategy, add database indexes, configure max connections and timeout settings",
+            "status": "pending",
+            "testStrategy": "Load test connection pool, measure query performance, verify connection handling under load"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Integrate Google Analytics Data API",
+        "description": "Implement Google Analytics Data API integration for fetching analytics data",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "2"
+        ],
+        "details": "- Set up Google Analytics Data API client\n- Implement OAuth scope for GA access\n- Create service for listing GA properties\n- Build data fetching functions\n- Implement caching layer\n- Handle API rate limits\n- Create data transformation utilities",
+        "testStrategy": "- Test API authentication\n- Verify property listing\n- Test data fetching with various metrics\n- Check rate limit handling\n- Test error scenarios",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up Google Analytics Data API Client Configuration",
+            "description": "Initialize and configure the Google Analytics Data API client with proper credentials and OAuth2 setup",
+            "dependencies": [],
+            "details": "Install required dependencies (googleapis), create configuration file for API credentials, implement OAuth2 client setup with proper scopes for GA access, create singleton instance for API client",
+            "status": "done",
+            "testStrategy": "Test client initialization, verify credentials loading, check OAuth2 configuration"
+          },
+          {
+            "id": 2,
+            "title": "Implement GA Properties Service",
+            "description": "Create service layer for fetching and managing Google Analytics properties",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "Create GAPropertiesService class, implement methods for listing available properties, add property selection and validation, implement error handling for API responses",
+            "status": "done",
+            "testStrategy": "Test property listing functionality, verify error handling, mock API responses"
+          },
+          {
+            "id": 3,
+            "title": "Build Data Fetching Functions",
+            "description": "Implement core functions for fetching various types of analytics data",
+            "dependencies": [
+              "4.1",
+              "4.2"
+            ],
+            "details": "Create data fetching methods for different metrics and dimensions, implement date range handling, add parameter validation, create query builders for different report types",
+            "status": "done",
+            "testStrategy": "Test data fetching with various parameters, verify date range handling, test query building"
+          },
+          {
+            "id": 4,
+            "title": "Implement Caching Layer",
+            "description": "Add caching mechanism for API responses to improve performance and handle rate limits",
+            "dependencies": [
+              "4.3"
+            ],
+            "details": "Implement Redis/Memcached caching layer, add cache key generation, set up TTL for different data types, implement cache invalidation strategy",
+            "status": "pending",
+            "testStrategy": "Test cache hits/misses, verify TTL functionality, test cache invalidation"
+          },
+          {
+            "id": 5,
+            "title": "Add Rate Limit Handling",
+            "description": "Implement rate limit detection and handling mechanisms",
+            "dependencies": [
+              "4.3",
+              "4.4"
+            ],
+            "details": "Add rate limit detection, implement exponential backoff, create queue system for requests, add rate limit monitoring and logging",
+            "status": "pending",
+            "testStrategy": "Test rate limit detection, verify backoff strategy, test queue system"
+          },
+          {
+            "id": 6,
+            "title": "Create Data Transformation Utilities",
+            "description": "Build utilities for transforming and formatting API response data",
+            "dependencies": [
+              "4.3"
+            ],
+            "details": "Create data normalization functions, implement format conversion utilities, add data aggregation methods, create response formatting helpers",
+            "status": "pending",
+            "testStrategy": "Test data transformation accuracy, verify format conversions, test edge cases"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Build dashboard UI components",
+        "description": "Create reusable UI components for the dashboard using React and Tailwind CSS",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "details": "- Create layout components (Header, Sidebar, Container)\n- Build widget container component\n- Create date range picker\n- Implement drag-and-drop functionality\n- Build loading states and skeletons\n- Create error boundary components\n- Implement responsive design",
+        "testStrategy": "- Component unit tests\n- Visual regression tests\n- Accessibility testing\n- Responsive design testing\n- Cross-browser compatibility",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create base layout components",
+            "description": "Implement core layout components including Header, Sidebar, and main Container with responsive design",
+            "dependencies": [],
+            "details": "Create Header.tsx with app logo, navigation, and user menu. Build Sidebar.tsx with collapsible navigation and theme toggle. Implement Container.tsx with grid layout system. Use Tailwind CSS for styling and responsive breakpoints.",
+            "status": "done",
+            "testStrategy": "Unit test component rendering, test responsive breakpoints, verify accessibility compliance"
+          },
+          {
+            "id": 2,
+            "title": "Implement widget container component",
+            "description": "Build reusable widget container with configuration options and placeholder states",
+            "dependencies": [
+              "5.1"
+            ],
+            "details": "Create WidgetContainer.tsx with configurable width/height, header with title and actions, content area with overflow handling, and loading/error states. Implement widget resize handles and basic styling.",
+            "status": "done",
+            "testStrategy": "Test widget resize functionality, verify content overflow handling, test loading and error states"
+          },
+          {
+            "id": 3,
+            "title": "Build date range picker component",
+            "description": "Create custom date range picker with preset options and range validation",
+            "dependencies": [
+              "5.1"
+            ],
+            "details": "Implement DateRangePicker.tsx using react-datepicker as base. Add preset ranges (7D, 30D, etc.), custom range selection, and range validation. Style with Tailwind CSS and ensure mobile compatibility.",
+            "status": "done",
+            "testStrategy": "Test date selection, validate range constraints, verify preset functionality"
+          },
+          {
+            "id": 4,
+            "title": "Implement drag-and-drop functionality",
+            "description": "Add drag-and-drop capability for widget repositioning using react-dnd",
+            "dependencies": [
+              "5.1",
+              "5.2"
+            ],
+            "details": "Set up react-dnd provider, implement drag sources and drop targets, add grid snapping, handle position updates, and save layout changes. Include visual feedback during drag operations.",
+            "status": "pending",
+            "testStrategy": "Test drag and drop interactions, verify position updates, test grid snapping"
+          },
+          {
+            "id": 5,
+            "title": "Create loading states and skeletons",
+            "description": "Build loading state components and skeleton screens for all dashboard elements",
+            "dependencies": [
+              "5.1",
+              "5.2"
+            ],
+            "details": "Create Skeleton.tsx component with configurable dimensions and animation. Implement skeleton screens for widgets, lists, and data loading states. Use Tailwind CSS for styling animations.",
+            "status": "pending",
+            "testStrategy": "Test skeleton rendering, verify animations, test different dimensions"
+          },
+          {
+            "id": 6,
+            "title": "Implement error boundary components",
+            "description": "Create error boundary components for graceful error handling across the dashboard",
+            "dependencies": [
+              "5.1",
+              "5.2",
+              "5.5"
+            ],
+            "details": "Implement ErrorBoundary.tsx using React Error Boundary. Create fallback UI components for different error types. Add error reporting integration and retry mechanisms.",
+            "status": "pending",
+            "testStrategy": "Test error catching and display, verify retry functionality, test error reporting"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Implement data visualization widgets",
+        "description": "Create chart widgets using a charting library (Chart.js or Recharts)",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "5"
+        ],
+        "details": "- Implement Line Chart widget\n- Create Bar Chart widget\n- Build Pie Chart widget\n- Implement KPI Card widget\n- Create Data Table widget\n- Build Geographic Map widget\n- Add real-time counter widget\n- Implement widget configuration options",
+        "testStrategy": "- Test chart rendering with various data\n- Performance testing with large datasets\n- Test interactive features\n- Verify data accuracy\n- Test edge cases (empty data, errors)",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up charting library and base widget component",
+            "description": "Initialize and configure the charting library (Chart.js) and create a base widget component structure",
+            "dependencies": [],
+            "details": "Install Chart.js package, create a BaseWidget component with common configuration options, implement widget container layout, and set up basic styling",
+            "status": "done",
+            "testStrategy": "Test base widget rendering and configuration props"
+          },
+          {
+            "id": 2,
+            "title": "Implement Line and Bar Chart widgets",
+            "description": "Create reusable components for Line and Bar charts with customizable options",
+            "dependencies": [
+              "6.1"
+            ],
+            "details": "Implement LineChart and BarChart components using Chart.js, add data transformation utilities, implement zoom/pan controls, and add tooltips",
+            "status": "done",
+            "testStrategy": "Test chart rendering with various datasets, verify interactive features"
+          },
+          {
+            "id": 3,
+            "title": "Create Pie Chart and KPI Card widgets",
+            "description": "Develop Pie Chart component and KPI display cards for metric visualization",
+            "dependencies": [
+              "6.1"
+            ],
+            "details": "Build PieChart component with legend support, create KPICard component with value formatting, implement color schemes, add animations",
+            "status": "done",
+            "testStrategy": "Test pie chart segments calculation, verify KPI formatting"
+          },
+          {
+            "id": 4,
+            "title": "Implement Data Table widget",
+            "description": "Create a customizable data table widget with sorting and filtering capabilities",
+            "dependencies": [
+              "6.1"
+            ],
+            "details": "Build DataTable component with column configuration, implement sorting/filtering logic, add pagination support, implement search functionality",
+            "status": "pending",
+            "testStrategy": "Test table sorting, filtering, and pagination functions"
+          },
+          {
+            "id": 5,
+            "title": "Develop Geographic Map widget",
+            "description": "Create an interactive map widget for geographical data visualization",
+            "dependencies": [
+              "6.1"
+            ],
+            "details": "Integrate map library (e.g., Leaflet), implement map markers/regions, add zoom controls, create choropleth visualization support",
+            "status": "pending",
+            "testStrategy": "Test map rendering, marker placement, and interaction events"
+          },
+          {
+            "id": 6,
+            "title": "Add real-time counter widget",
+            "description": "Implement a real-time updating counter widget with websocket support",
+            "dependencies": [
+              "6.1"
+            ],
+            "details": "Create Counter component with websocket connection, implement auto-update functionality, add animation effects, handle connection states",
+            "status": "pending",
+            "testStrategy": "Test websocket connection, verify counter updates, test disconnection handling"
+          },
+          {
+            "id": 7,
+            "title": "Implement widget configuration panel",
+            "description": "Create a unified configuration interface for all widget types",
+            "dependencies": [
+              "6.2",
+              "6.3",
+              "6.4",
+              "6.5",
+              "6.6"
+            ],
+            "details": "Build configuration panel component, implement widget-specific settings, add color/theme customization, create layout options, implement save/reset functionality",
+            "status": "pending",
+            "testStrategy": "Test configuration changes, verify settings persistence, test configuration validation"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Create dashboard management system",
+        "description": "Build functionality for creating, saving, and managing custom dashboards",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "3",
+          "5",
+          "6"
+        ],
+        "details": "- Create dashboard CRUD operations\n- Implement dashboard state management\n- Build widget configuration modal\n- Add dashboard templates\n- Implement dashboard sharing\n- Create dashboard duplication\n- Add dashboard versioning",
+        "testStrategy": "- Test CRUD operations\n- Verify state persistence\n- Test widget configurations\n- Check sharing functionality\n- Test concurrent editing",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement subscription and billing with Stripe",
+        "description": "Integrate Stripe for subscription management and payment processing",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "2",
+          "3"
+        ],
+        "details": "- Set up Stripe API integration\n- Create subscription plans\n- Implement checkout flow\n- Build customer portal\n- Handle webhooks\n- Implement usage-based limits\n- Create billing management UI\n- Add invoice generation",
+        "testStrategy": "- Test payment flows in test mode\n- Verify webhook handling\n- Test subscription lifecycle\n- Check error handling\n- Test refund processes",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up Stripe API integration and configuration",
+            "description": "Initialize Stripe SDK, configure API keys, and set up basic integration with the application",
+            "dependencies": [],
+            "details": "Install Stripe SDK, create environment variables for API keys, implement Stripe client initialization, set up test and production environments, create basic Stripe service wrapper",
+            "status": "pending",
+            "testStrategy": "Verify API connection, test environment detection, validate key configuration"
+          },
+          {
+            "id": 2,
+            "title": "Create subscription plans and product catalog",
+            "description": "Define and create subscription plans in Stripe dashboard and implement product catalog in the application",
+            "dependencies": [
+              "8.1"
+            ],
+            "details": "Create tiered subscription plans in Stripe, implement product catalog API endpoints, create database schema for plan mapping, build plan comparison features",
+            "status": "pending",
+            "testStrategy": "Verify plan creation, test plan retrieval, validate pricing tiers"
+          },
+          {
+            "id": 3,
+            "title": "Implement checkout flow and payment processing",
+            "description": "Build checkout process using Stripe Checkout or Elements for subscription enrollment",
+            "dependencies": [
+              "8.2"
+            ],
+            "details": "Implement Stripe Checkout session creation, handle success/cancel flows, create payment confirmation handling, implement trial period logic, add payment method validation",
+            "status": "pending",
+            "testStrategy": "Test checkout flow with test cards, verify success/failure scenarios, test trial activation"
+          },
+          {
+            "id": 4,
+            "title": "Build webhook handling system",
+            "description": "Implement webhook endpoints to handle Stripe events for subscription lifecycle management",
+            "dependencies": [
+              "8.3"
+            ],
+            "details": "Create webhook endpoint with signature verification, implement handlers for subscription events, handle payment success/failure events, manage subscription status updates, implement retry logic",
+            "status": "pending",
+            "testStrategy": "Test webhook signature validation, verify event handling, test retry mechanism"
+          },
+          {
+            "id": 5,
+            "title": "Implement customer portal and billing UI",
+            "description": "Create customer portal for subscription management and billing information",
+            "dependencies": [
+              "8.3",
+              "8.4"
+            ],
+            "details": "Implement Stripe Customer Portal integration, create billing management interface, build subscription status display, add payment method management, implement invoice history view",
+            "status": "pending",
+            "testStrategy": "Test portal functionality, verify subscription management features, validate payment method updates"
+          },
+          {
+            "id": 6,
+            "title": "Add usage-based billing and invoice generation",
+            "description": "Implement usage tracking, limits, and automated invoice generation",
+            "dependencies": [
+              "8.4",
+              "8.5"
+            ],
+            "details": "Implement usage tracking system, create usage limits enforcement, build automated usage reporting to Stripe, implement invoice generation and delivery, create usage analytics dashboard",
+            "status": "pending",
+            "testStrategy": "Test usage tracking accuracy, verify limit enforcement, validate invoice generation"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Build reporting and export features",
+        "description": "Implement PDF generation, CSV export, and scheduled email reports",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "6",
+          "7"
+        ],
+        "details": "- Implement PDF generation with Puppeteer or similar\n- Create CSV export functionality\n- Build email template system\n- Implement report scheduling\n- Add branding customization\n- Create public link sharing\n- Build report history",
+        "testStrategy": "- Test PDF generation quality\n- Verify CSV data accuracy\n- Test email delivery\n- Check scheduling accuracy\n- Test various report formats",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Develop user settings and profile management",
+        "description": "Create user settings interface for profile, preferences, and API keys",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "2",
+          "3"
+        ],
+        "details": "- Build profile management UI\n- Implement notification preferences\n- Add timezone settings\n- Create API key generation (Pro plan)\n- Build account deletion flow\n- Add data export options\n- Implement 2FA setup",
+        "testStrategy": "- Test profile updates\n- Verify preference persistence\n- Test API key functionality\n- Check data privacy features\n- Test account deletion",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Implement caching and performance optimization",
+        "description": "Add Redis caching, optimize queries, and improve application performance",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "4",
+          "7"
+        ],
+        "details": "- Set up Redis for caching\n- Implement GA data caching\n- Add query optimization\n- Implement lazy loading\n- Add CDN for static assets\n- Optimize bundle size\n- Implement service workers",
+        "testStrategy": "- Load testing\n- Cache hit rate monitoring\n- Performance benchmarking\n- Bundle size analysis\n- API response time testing",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Add monitoring and error tracking",
+        "description": "Implement application monitoring, error tracking, and analytics",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "1"
+        ],
+        "details": "- Set up Sentry for error tracking\n- Implement custom analytics\n- Add performance monitoring\n- Create admin dashboard\n- Set up alerts\n- Implement logging system\n- Add uptime monitoring",
+        "testStrategy": "- Test error capture\n- Verify analytics accuracy\n- Test alert triggers\n- Check log aggregation\n- Monitor false positives",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Create onboarding flow and documentation",
+        "description": "Build guided onboarding experience and user documentation",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "2",
+          "4",
+          "7"
+        ],
+        "details": "- Create onboarding wizard\n- Build interactive tutorials\n- Write user documentation\n- Create video tutorials\n- Build help center\n- Add in-app tooltips\n- Create FAQ section",
+        "testStrategy": "- User testing of onboarding\n- Documentation review\n- A/B testing conversion\n- Accessibility testing\n- Mobile experience testing",
+        "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Implement security and compliance features",
+        "description": "Add security measures and ensure GDPR/SOC2 compliance",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "1",
+          "2",
+          "3"
+        ],
+        "details": "- Implement CSRF protection\n- Add rate limiting\n- Set up security headers\n- Implement data encryption\n- Create privacy controls\n- Add audit logging\n- Implement GDPR features\n- Prepare SOC2 documentation",
+        "testStrategy": "- Security penetration testing\n- OWASP compliance check\n- Data encryption verification\n- Access control testing\n- Compliance audit",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement CSRF Protection and Security Headers",
+            "description": "Set up CSRF token validation and configure essential security headers including Content-Security-Policy, X-Frame-Options, and X-XSS-Protection",
+            "dependencies": [],
+            "details": "Install csrf middleware package, implement token generation and validation, configure security headers in next.config.js, add helmet middleware for additional header protection",
+            "status": "pending",
+            "testStrategy": "Test CSRF token validation on forms, verify security headers presence and values, conduct XSS vulnerability testing"
+          },
+          {
+            "id": 2,
+            "title": "Implement Rate Limiting and API Protection",
+            "description": "Add rate limiting middleware for API routes and implement protection against brute force attacks",
+            "dependencies": [
+              "14.1"
+            ],
+            "details": "Set up Redis for rate limiting storage, implement rate limiting middleware using express-rate-limit, configure limits per route and IP, add retry-after headers",
+            "status": "pending",
+            "testStrategy": "Test rate limit thresholds, verify blocking behavior, test rate limit reset timing"
+          },
+          {
+            "id": 3,
+            "title": "Implement Data Encryption and Privacy Controls",
+            "description": "Set up data encryption for sensitive information and implement user privacy control features",
+            "dependencies": [
+              "14.1",
+              "14.2"
+            ],
+            "details": "Implement AES encryption for sensitive data, set up key management, create data masking utilities, implement privacy toggles and user consent management",
+            "status": "pending",
+            "testStrategy": "Test encryption/decryption functions, verify data masking, test privacy control effectiveness"
+          },
+          {
+            "id": 4,
+            "title": "Implement Audit Logging System",
+            "description": "Create comprehensive audit logging system for user actions and system events",
+            "dependencies": [
+              "14.2",
+              "14.3"
+            ],
+            "details": "Set up structured logging with Winston, implement audit log schema, create logging middleware, add log rotation and retention policies",
+            "status": "pending",
+            "testStrategy": "Verify log creation for key actions, test log rotation, check log format and completeness"
+          },
+          {
+            "id": 5,
+            "title": "Implement GDPR Compliance Features",
+            "description": "Add GDPR-required features including data export, deletion requests, and consent management",
+            "dependencies": [
+              "14.3",
+              "14.4"
+            ],
+            "details": "Create data export API, implement right to be forgotten functionality, add consent tracking, implement data retention policies",
+            "status": "pending",
+            "testStrategy": "Test data export format, verify complete data deletion, test consent withdrawal process"
+          },
+          {
+            "id": 6,
+            "title": "Prepare SOC2 Documentation and Compliance",
+            "description": "Create required documentation and implement processes for SOC2 compliance",
+            "dependencies": [
+              "14.1",
+              "14.2",
+              "14.3",
+              "14.4",
+              "14.5"
+            ],
+            "details": "Document security policies and procedures, create incident response plan, implement access review process, prepare compliance monitoring dashboard",
+            "status": "pending",
+            "testStrategy": "Review documentation completeness, verify policy implementation, test incident response procedures"
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Prepare for production deployment",
+        "description": "Set up production infrastructure and deployment pipeline",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [
+          "11",
+          "12",
+          "14"
+        ],
+        "details": "- Configure Vercel deployment\n- Set up CI/CD pipeline\n- Configure production database\n- Set up monitoring\n- Create backup strategy\n- Configure CDN\n- Set up staging environment\n- Create deployment documentation",
+        "testStrategy": "- Deployment testing\n- Rollback procedures\n- Load testing\n- Disaster recovery testing\n- Multi-region testing",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "totalTasks": 15,
+      "completedTasks": 0,
+      "version": "1.0.0",
+      "lastUpdated": "2024-08-07T00:00:00.000Z",
+      "projectName": "Google Analytics Dashboard SaaS",
+      "created": "2025-08-07T06:17:12.079Z",
+      "description": "Tasks for master context",
+      "updated": "2025-08-07T07:04:40.358Z"
+    }
+  }
+}
