@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const propertyId = searchParams.get('propertyId')
     const dateRange = searchParams.get('dateRange') || '30d'
-    const metric = searchParams.get('metric') || 'activeUsers'
+    // const metric = searchParams.get('metric') || 'activeUsers' // TODO: Use metric parameter
 
     if (!propertyId) {
       return NextResponse.json({ error: 'Property ID is required' }, { status: 400 })
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
       let totalPageViews = 0
       let totalDuration = 0
 
-      data.rows.forEach((row: any) => {
+      data.rows.forEach((row: any[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any
         const date = row.dimensionValues[0].value
         const users = parseInt(row.metricValues[0].value || '0')
         const sessions = parseInt(row.metricValues[1].value || '0')

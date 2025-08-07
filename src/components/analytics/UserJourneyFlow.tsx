@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getJourneyData, getAvailableJourneySources, type UserJourney, type JourneyStage } from '@/lib/user-journey-data'
+import { getJourneyData, type UserJourney } from '@/lib/user-journey-data'
 
 interface UserJourneyFlowProps {
   propertyName: string | null
@@ -11,7 +11,7 @@ interface UserJourneyFlowProps {
 export default function UserJourneyFlow({ propertyName, selectedSource = 'reddit-ads' }: UserJourneyFlowProps) {
   const [journeyData, setJourneyData] = useState<UserJourney | null>(null)
   const [selectedStage, setSelectedStage] = useState<string | null>(null)
-  const [availableSources] = useState(getAvailableJourneySources(propertyName))
+  // const [availableSources] = useState(getAvailableJourneySources()) // TODO: Use available sources
 
   useEffect(() => {
     const data = getJourneyData(propertyName, selectedSource)

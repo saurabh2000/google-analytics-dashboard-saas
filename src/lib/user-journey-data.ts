@@ -31,8 +31,8 @@ export interface JourneyFilter {
 // Generate journey data based on traffic source
 export const getJourneyData = (
   propertyName: string | null, 
-  source: string = 'reddit-ads',
-  filters: JourneyFilter = {}
+  source: string = 'reddit-ads'
+  // filters: JourneyFilter = {} // TODO: Implement filters
 ): UserJourney => {
   const isEcommerce = propertyName === 'E-commerce Site'
   const isWebsite = propertyName === 'My Website'
@@ -386,7 +386,7 @@ export const getJourneyData = (
 }
 
 // Get available traffic sources for journey analysis
-export const getAvailableJourneySources = (propertyName: string | null) => {
+export const getAvailableJourneySources = () => {
   const sources = [
     { id: 'reddit-ads', name: 'Reddit Ads', type: 'paid-search', icon: '📱' },
     { id: 'google-ads', name: 'Google Ads', type: 'paid-search', icon: '🎯' },

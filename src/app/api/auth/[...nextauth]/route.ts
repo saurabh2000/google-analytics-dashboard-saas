@@ -14,7 +14,7 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    session: async ({ session, token }: any) => {
+    session: async ({ session, token }: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       return {
         ...session,
         user: {
@@ -24,7 +24,7 @@ export const authOptions = {
         accessToken: token.accessToken,
       }
     },
-    jwt: async ({ token, user, account }: any) => {
+    jwt: async ({ token, user, account }: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       if (user) {
         token.id = user.id
       }

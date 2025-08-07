@@ -75,7 +75,7 @@ export default function PieChart({
         cornerRadius: 8,
         displayColors: true,
         callbacks: {
-          label: function(context: any) {
+          label: function(context: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             const percentage = ((context.parsed / total) * 100).toFixed(1)
             return `${context.label}: ${context.parsed.toLocaleString()} (${percentage}%)`
           }

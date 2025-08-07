@@ -34,7 +34,7 @@ export default function SignIn() {
       } else if (result?.url) {
         router.push(result.url)
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
@@ -104,7 +104,7 @@ export default function SignIn() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
-                  What you'll get access to
+                  What you&apos;ll get access to
                 </span>
               </div>
             </div>
@@ -148,7 +148,7 @@ export default function SignIn() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                <strong>Secure OAuth:</strong> We use Google's official OAuth 2.0 flow. 
+                <strong>Secure OAuth:</strong> We use Google&apos;s official OAuth 2.0 flow. 
                 Your credentials are never stored on our servers.
               </p>
             </div>

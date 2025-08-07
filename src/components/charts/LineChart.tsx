@@ -75,7 +75,7 @@ export default function LineChart({
         cornerRadius: 8,
         displayColors: false,
         callbacks: {
-          label: function(context: any) {
+          label: function(context: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             return `${title}: ${context.parsed.y.toLocaleString()}`
           }
         }
@@ -108,7 +108,7 @@ export default function LineChart({
             size: 12,
           },
           color: '#6B7280',
-          callback: function(value: any) {
+          callback: function(value: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             return value.toLocaleString()
           }
         },

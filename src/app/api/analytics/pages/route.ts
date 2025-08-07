@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (data.rows && data.rows.length > 0) {
-      data.rows.slice(0, 5).forEach((row: any) => {
+      data.rows.slice(0, 5).forEach((row: any[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any
         const pagePath = row.dimensionValues[0].value
         const pageTitle = row.dimensionValues[1].value
         const pageViews = parseInt(row.metricValues[0].value || '0')

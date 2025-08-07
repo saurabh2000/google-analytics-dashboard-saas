@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
-import GAConnectionModal from '@/components/analytics/GAConnectionModal'
+// import GAConnectionModal from '@/components/analytics/GAConnectionModal' // TODO: Use GA connection modal
 import LineChart from '@/components/charts/LineChart'
 import BarChart from '@/components/charts/BarChart'
 import PieChart from '@/components/charts/PieChart'
@@ -11,12 +11,16 @@ import KpiCard from '@/components/dashboard/KpiCard'
 import CustomizationPanel from '@/components/dashboard/CustomizationPanel'
 import UserJourneyFlow from '@/components/analytics/UserJourneyFlow'
 import JourneySourceSelector from '@/components/analytics/JourneySourceSelector'
+import ActiveUsers from '@/components/collaboration/ActiveUsers'
+import ActivityFeed from '@/components/collaboration/ActivityFeed'
+import AlertPanel from '@/components/alerts/AlertPanel'
 import { getAnalyticsData, type AnalyticsData } from '@/lib/analytics-data'
 import { getDrillDownData, getAvailableKpiCards } from '@/lib/drill-down-data'
+import collaborationManager, { type DashboardState } from '@/lib/socket'
 
 export default function Dashboard() {
   const [selectedDateRange, setSelectedDateRange] = useState('30d')
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const [showGAModal, setShowGAModal] = useState(false)
   const [connectedProperty, setConnectedProperty] = useState<string | null>(null)
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
@@ -28,6 +32,10 @@ export default function Dashboard() {
   ])
   const [drillDownData, setDrillDownData] = useState(() => getDrillDownData(null))
   const [selectedJourneySource, setSelectedJourneySource] = useState('reddit-ads')
+  const [collaborationConnected, setCollaborationConnected] = useState(false)
+
+  // Alert system state
+  const [showAlertPanel, setShowAlertPanel] = useState(false)
 
   // Load saved connection and analytics data
   useEffect(() => {
@@ -79,12 +87,88 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [connectedProperty])
 
+  // Initialize collaboration when user is authenticated
+  useEffect(() => {
+    if (session?.user && !collaborationConnected) {
+      const dashboardId = `dashboard-${session.user.id || 'anonymous'}`
+      
+      collaborationManager.connect({
+        id: session.user.id || Date.now().toString(),
+        name: session.user.name || 'Anonymous User',
+        email: session.user.email || 'anonymous@example.com',
+        avatar: session.user.image || undefined
+      }, dashboardId)
+
+      setCollaborationConnected(true)
+
+      // Subscribe to remote state updates
+      const unsubscribeState = collaborationManager.onStateUpdated((newState: DashboardState) => {
+        // Update local state to match remote changes
+        if (newState.selectedDateRange !== selectedDateRange) {
+          setSelectedDateRange(newState.selectedDateRange)
+        }
+        if (JSON.stringify(newState.enabledKpiCards) !== JSON.stringify(enabledKpiCards)) {
+          setEnabledKpiCards(newState.enabledKpiCards)
+        }
+        if (newState.selectedJourneySource !== selectedJourneySource) {
+          setSelectedJourneySource(newState.selectedJourneySource)
+        }
+        if (newState.connectedProperty !== connectedProperty) {
+          setConnectedProperty(newState.connectedProperty)
+        }
+      })
+
+      return () => {
+        unsubscribeState()
+        collaborationManager.disconnect()
+        setCollaborationConnected(false)
+      }
+    }
+  }, [session, collaborationConnected])
+
+  // Broadcast state changes to other users
+  const broadcastStateChange = (changes: Partial<DashboardState>) => {
+    if (collaborationConnected) {
+      collaborationManager.updateDashboardState(changes)
+    }
+  }
+
   const handleGAConnect = (propertyId: string, propertyName: string) => {
     setConnectedProperty(propertyName)
     // Save to sessionStorage so it persists during the browser session
     sessionStorage.setItem('connectedGAProperty', propertyName)
-    // In a real app, you'd also trigger data fetching here
+    // Broadcast change to other users
+    broadcastStateChange({ connectedProperty: propertyName })
     console.log('Connected to GA property:', propertyId, propertyName)
+  }
+
+  const handleDateRangeChange = (newRange: string) => {
+    setSelectedDateRange(newRange)
+    broadcastStateChange({ selectedDateRange: newRange })
+  }
+
+  const handleJourneySourceChange = (source: string) => {
+    setSelectedJourneySource(source)
+    broadcastStateChange({ selectedJourneySource: source })
+  }
+
+  const handleKpiCardsUpdate = (newCards: string[]) => {
+    setEnabledKpiCards(newCards)
+    broadcastStateChange({ enabledKpiCards: newCards })
+  }
+
+  // const handleAddKpiCard = (cardId: string) => {
+  //   const newCards = [...enabledKpiCards, cardId]
+  //   setEnabledKpiCards(newCards)
+  //   collaborationManager.addKpiCard(cardId)
+  //   broadcastStateChange({ enabledKpiCards: newCards })
+  // }
+
+  const handleRemoveKpiCard = (cardId: string) => {
+    const newCards = enabledKpiCards.filter(id => id !== cardId)
+    setEnabledKpiCards(newCards)
+    collaborationManager.removeKpiCard(cardId)
+    broadcastStateChange({ enabledKpiCards: newCards })
   }
 
   const openModal = () => {
@@ -103,6 +187,18 @@ export default function Dashboard() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Active Users */}
+              <ActiveUsers className="hidden md:block" />
+              
+              {/* Alerts Button */}
+              <button
+                onClick={() => setShowAlertPanel(true)}
+                className="flex items-center space-x-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 px-3 py-2 rounded-lg text-sm transition-colors border border-red-200 dark:border-red-800"
+              >
+                <span>🔔</span>
+                <span>Alerts</span>
+              </button>
+              
               {/* Customize Button */}
               <button
                 onClick={() => setShowCustomizationPanel(true)}
@@ -128,7 +224,7 @@ export default function Dashboard() {
               {/* Date Range Picker */}
               <select 
                 value={selectedDateRange}
-                onChange={(e) => setSelectedDateRange(e.target.value)}
+                onChange={(e) => handleDateRangeChange(e.target.value)}
                 disabled={isRefreshing}
                 className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -195,11 +291,9 @@ export default function Dashboard() {
                 id={cardConfig.id}
                 name={cardConfig.name}
                 icon={cardConfig.icon}
-                color={cardConfig.color as any}
+                color={cardConfig.color as 'blue' | 'green' | 'purple' | 'orange'}
                 analyticsData={analyticsData}
-                onRemove={(id) => {
-                  setEnabledKpiCards(cards => cards.filter(c => c !== id))
-                }}
+                onRemove={handleRemoveKpiCard}
                 isCustomizable={true}
               />
             )
@@ -366,7 +460,7 @@ export default function Dashboard() {
                 <JourneySourceSelector
                   propertyName={connectedProperty}
                   selectedSource={selectedJourneySource}
-                  onSourceChange={setSelectedJourneySource}
+                  onSourceChange={handleJourneySourceChange}
                   className="min-w-[200px]"
                 />
                 <button className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
@@ -488,10 +582,20 @@ export default function Dashboard() {
       {/* Customization Panel */}
       <CustomizationPanel
         enabledCards={enabledKpiCards}
-        onUpdateCards={setEnabledKpiCards}
+        onUpdateCards={handleKpiCardsUpdate}
         isOpen={showCustomizationPanel}
         onClose={() => setShowCustomizationPanel(false)}
       />
+
+      {/* Alert Panel */}
+      <AlertPanel
+        isOpen={showAlertPanel}
+        onClose={() => setShowAlertPanel(false)}
+        analyticsData={analyticsData}
+      />
+
+      {/* Activity Feed for Collaboration */}
+      <ActivityFeed />
     </div>
   )
 }
