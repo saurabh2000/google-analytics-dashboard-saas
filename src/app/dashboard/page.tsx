@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 // import GAConnectionModal from '@/components/analytics/GAConnectionModal' // TODO: Use GA connection modal
 import LineChart from '@/components/charts/LineChart'
@@ -14,14 +15,22 @@ import JourneySourceSelector from '@/components/analytics/JourneySourceSelector'
 import ActiveUsers from '@/components/collaboration/ActiveUsers'
 import ActivityFeed from '@/components/collaboration/ActivityFeed'
 import AlertPanel from '@/components/alerts/AlertPanel'
-import { getAnalyticsData, type AnalyticsData } from '@/lib/analytics-data'
+import GoogleAnalyticsModal from '@/components/analytics/GoogleAnalyticsModal'
+import { getAnalyticsData, fetchAnalyticsData, type AnalyticsData } from '@/lib/analytics-data'
 import { getDrillDownData, getAvailableKpiCards } from '@/lib/drill-down-data'
 import collaborationManager, { type DashboardState } from '@/lib/socket'
 
 export default function Dashboard() {
+  const router = useRouter()
   const [selectedDateRange, setSelectedDateRange] = useState('30d')
   const { data: session } = useSession()
+
+  // Redirect to tenant dashboard for better demo experience
+  useEffect(() => {
+    router.push('/tenant/demo/dashboard')
+  }, []) // Remove router dependency to prevent infinite loops
   const [showGAModal, setShowGAModal] = useState(false)
+  const [isRealData, setIsRealData] = useState(false)
   const [connectedProperty, setConnectedProperty] = useState<string | null>(null)
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
@@ -48,14 +57,14 @@ export default function Dashboard() {
   // Update analytics data when property changes or date range changes
   useEffect(() => {
     const fetchData = () => {
-      setIsRefreshing(true)
+      setIsRefreshing(() => true)
       // Simulate API call delay
       setTimeout(() => {
         const data = getAnalyticsData(connectedProperty, selectedDateRange)
-        setAnalyticsData(data)
-        setDrillDownData(getDrillDownData(connectedProperty))
-        setLastUpdated(new Date())
-        setIsRefreshing(false)
+        setAnalyticsData(() => data)
+        setDrillDownData(() => getDrillDownData(connectedProperty))
+        setLastUpdated(() => new Date())
+        setIsRefreshing(() => false)
       }, 300)
     }
 
@@ -81,7 +90,7 @@ export default function Dashboard() {
           realTimeUsers: newRealTimeUsers
         }
       })
-      setLastUpdated(new Date())
+      setLastUpdated(() => new Date()) // Use functional update
     }, 30000) // Update every 30 seconds
 
     return () => clearInterval(interval)
@@ -104,18 +113,18 @@ export default function Dashboard() {
 
       // Subscribe to remote state updates
       const unsubscribeState = collaborationManager.onStateUpdated((newState: DashboardState) => {
-        // Update local state to match remote changes
-        if (newState.selectedDateRange !== selectedDateRange) {
-          setSelectedDateRange(newState.selectedDateRange)
+        // Update local state to match remote changes with functional updates to prevent dependency loops
+        if (newState.selectedDateRange !== undefined) {
+          setSelectedDateRange(current => current !== newState.selectedDateRange ? newState.selectedDateRange : current)
         }
-        if (JSON.stringify(newState.enabledKpiCards) !== JSON.stringify(enabledKpiCards)) {
-          setEnabledKpiCards(newState.enabledKpiCards)
+        if (newState.enabledKpiCards !== undefined) {
+          setEnabledKpiCards(current => JSON.stringify(current) !== JSON.stringify(newState.enabledKpiCards) ? newState.enabledKpiCards : current)
         }
-        if (newState.selectedJourneySource !== selectedJourneySource) {
-          setSelectedJourneySource(newState.selectedJourneySource)
+        if (newState.selectedJourneySource !== undefined) {
+          setSelectedJourneySource(current => current !== newState.selectedJourneySource ? newState.selectedJourneySource : current)
         }
-        if (newState.connectedProperty !== connectedProperty) {
-          setConnectedProperty(newState.connectedProperty)
+        if (newState.connectedProperty !== undefined) {
+          setConnectedProperty(current => current !== newState.connectedProperty ? newState.connectedProperty : current)
         }
       })
 
@@ -227,6 +236,7 @@ export default function Dashboard() {
                 value={selectedDateRange}
                 onChange={(e) => handleDateRangeChange(e.target.value)}
                 disabled={isRefreshing}
+                data-tutorial="date-range"
                 className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="7d">Last 7 days</option>
@@ -281,7 +291,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="px-4 sm:px-6 lg:px-8 py-8">
         {/* Customizable KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-tutorial="kpi-cards">
           {enabledKpiCards.map(cardId => {
             const cardConfig = getAvailableKpiCards().find(card => card.id === cardId)
             if (!cardConfig) return null
@@ -320,7 +330,7 @@ export default function Dashboard() {
         </div>
 
         {/* Chart Widgets */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" data-tutorial="charts">
           {/* Users Over Time Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-6">
@@ -446,7 +456,7 @@ export default function Dashboard() {
         </div>
 
         {/* User Journey Flow Analysis */}
-        <div className="mb-8">
+        <div className="mb-8" data-tutorial="user-journey">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-6">
               <div>

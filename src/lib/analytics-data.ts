@@ -1,4 +1,5 @@
 // Realistic Google Analytics sample data that changes based on connected property
+import { apiCache, cacheKeys } from './cache'
 
 export interface AnalyticsData {
   users: {
@@ -117,7 +118,62 @@ const generateTrend = (baseValue: number, dateRange: string = '30d', volatility:
   return trend
 }
 
+// Fetch analytics data from API (real or mock)
+export const fetchAnalyticsData = async (
+  propertyId?: string | null,
+  propertyName?: string | null, 
+  dateRange: string = '30d'
+): Promise<{ data: AnalyticsData; isReal: boolean; message: string }> => {
+  // Check cache first
+  const cacheKey = cacheKeys.analyticsData(propertyId || propertyName || 'demo', dateRange)
+  const cached = apiCache.get<{ data: AnalyticsData; isReal: boolean; message: string }>(cacheKey)
+  
+  if (cached) {
+    return cached
+  }
+  try {
+    const params = new URLSearchParams({
+      dateRange,
+      ...(propertyId && { propertyId }),
+      ...(propertyName && { propertyName })
+    })
+
+    const response = await fetch(`/api/analytics/data?${params}`)
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch analytics data')
+    }
+
+    const response_data = {
+      data: result.data,
+      isReal: result.isReal || false,
+      message: result.message || 'Analytics data loaded'
+    }
+    
+    // Cache the successful response
+    apiCache.set(cacheKey, response_data)
+    
+    return response_data
+  } catch (error) {
+    console.error('Failed to fetch analytics data:', error)
+    // Fallback to mock data
+    return {
+      data: getAnalyticsData(propertyName, dateRange),
+      isReal: false,
+      message: 'Using fallback mock data due to API error'
+    }
+  }
+}
+
 export const getAnalyticsData = (propertyName: string | null, dateRange: string = '30d'): AnalyticsData => {
+  // Check cache first
+  const cacheKey = cacheKeys.analyticsData(propertyName || 'demo', dateRange)
+  const cached = apiCache.get<AnalyticsData>(cacheKey)
+  
+  if (cached) {
+    return cached
+  }
   // Different data sets based on connected property
   const isEcommerce = propertyName === 'E-commerce Site'
   const isWebsite = propertyName === 'My Website'
@@ -245,4 +301,15 @@ export const getAnalyticsData = (propertyName: string | null, dateRange: string 
     },
     realTimeUsers: 8
   }
+}
+
+// Enhanced version with caching
+export const getCachedAnalyticsData = (propertyName: string | null, dateRange: string = '30d'): AnalyticsData => {
+  const data = getAnalyticsData(propertyName, dateRange)
+  
+  // Store in cache
+  const cacheKey = cacheKeys.analyticsData(propertyName || 'demo', dateRange)
+  apiCache.set(cacheKey, data)
+  
+  return data
 }

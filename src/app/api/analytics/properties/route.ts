@@ -1,43 +1,64 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
-// import { google } from 'googleapis' // TODO: Implement real Google Analytics API
+import { getGoogleAnalyticsProperties } from '@/lib/google-analytics'
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions) as any // eslint-disable-line @typescript-eslint/no-explicit-any
+    console.log('🔍 Properties API: Attempting to fetch Google Analytics properties...')
     
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    // Try to get real Google Analytics properties
+    try {
+      console.log('🔍 Properties API: Calling getGoogleAnalyticsProperties()...')
+      const properties = await getGoogleAnalyticsProperties()
+      console.log('✅ Properties API: Successfully fetched real GA properties:', {
+        count: properties?.length || 0,
+        properties: properties?.map(p => ({ id: p.propertyId, name: p.displayName })) || []
+      })
+      return NextResponse.json({ 
+        properties, 
+        isReal: true,
+        message: 'Real Google Analytics data'
+      })
+    } catch (gaError) {
+      console.error('❌ Properties API: Failed to fetch real GA properties:', {
+        error: gaError instanceof Error ? gaError.message : gaError,
+        stack: gaError instanceof Error ? gaError.stack?.substring(0, 500) : undefined
+      })
+      
+      // Fallback to demo data if GA API fails
+      const demoProperties = [
+        {
+          name: 'properties/123456789',
+          displayName: 'My Website',
+          propertyId: '123456789',
+          createTime: '2023-01-01T00:00:00Z',
+          updateTime: '2024-01-01T00:00:00Z',
+          currencyCode: 'USD',
+          timeZone: 'America/Los_Angeles'
+        },
+        {
+          name: 'properties/987654321',
+          displayName: 'E-commerce Site',
+          propertyId: '987654321',
+          createTime: '2023-06-01T00:00:00Z',
+          updateTime: '2024-01-01T00:00:00Z',
+          currencyCode: 'USD',
+          timeZone: 'America/New_York'
+        }
+      ]
+
+      return NextResponse.json({ 
+        properties: demoProperties,
+        isReal: false,
+        message: 'Demo data - sign in with Google to see real properties'
+      })
     }
-
-    // Get the user's access token from the session
-    // Note: In a production app, you'd store this in a database
-    // For now, we'll return a demo response
-    const demoProperties = [
-      {
-        name: 'properties/123456789',
-        displayName: 'My Website',
-        createTime: '2023-01-01T00:00:00Z',
-        updateTime: '2024-01-01T00:00:00Z',
-        currencyCode: 'USD',
-        timeZone: 'America/Los_Angeles'
-      },
-      {
-        name: 'properties/987654321',
-        displayName: 'E-commerce Site',
-        createTime: '2023-06-01T00:00:00Z',
-        updateTime: '2024-01-01T00:00:00Z',
-        currencyCode: 'USD',
-        timeZone: 'America/New_York'
-      }
-    ]
-
-    return NextResponse.json({ properties: demoProperties })
   } catch (error) {
-    console.error('Error fetching GA properties:', error)
+    console.error('Error in properties API:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch properties' }, 
+      { 
+        error: 'Failed to fetch properties',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      }, 
       { status: 500 }
     )
   }
