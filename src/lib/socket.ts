@@ -42,9 +42,11 @@ class CollaborationManager {
       this.disconnect()
     }
 
-    this.socket = io(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001', {
-      query: { dashboardId }
-    })
+    // Temporarily disable WebSocket connection - no server running
+    // this.socket = io(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001', {
+    //   query: { dashboardId }
+    // })
+    console.log('WebSocket disabled - no server running on port 3001')
 
     // Generate a color for this user
     const colors = [
@@ -59,14 +61,14 @@ class CollaborationManager {
       lastSeen: new Date()
     }
 
-    // Join the dashboard room
-    this.socket.emit('join_dashboard', {
-      user: this.currentUser,
-      dashboardId
-    })
+    // Join the dashboard room - disabled without server
+    // this.socket.emit('join_dashboard', {
+    //   user: this.currentUser,
+    //   dashboardId
+    // })
 
-    // Listen for events
-    this.setupEventListeners()
+    // Listen for events - disabled without server
+    // this.setupEventListeners()
   }
 
   disconnect() {

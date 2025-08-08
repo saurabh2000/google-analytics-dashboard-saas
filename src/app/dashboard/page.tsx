@@ -25,10 +25,7 @@ export default function Dashboard() {
   const [selectedDateRange, setSelectedDateRange] = useState('30d')
   const { data: session } = useSession()
 
-  // Redirect to tenant dashboard for better demo experience
-  useEffect(() => {
-    router.push('/tenant/demo/dashboard')
-  }, []) // Remove router dependency to prevent infinite loops
+  // Dashboard is now the main entry point - no redirect needed
   const [showGAModal, setShowGAModal] = useState(false)
   const [isRealData, setIsRealData] = useState(false)
   const [connectedProperty, setConnectedProperty] = useState<string | null>(null)

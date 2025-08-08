@@ -43,11 +43,13 @@ async function refreshAccessToken(token: any) { // eslint-disable-line @typescri
   }
 }
 
-import { PrismaAdapter } from '@next-auth/prisma-adapter'
-import { prisma } from '@/lib/prisma'
+// Temporarily disable Prisma adapter due to connection issues
+// import { PrismaAdapter } from '@next-auth/prisma-adapter'
+// import { prisma } from '@/lib/prisma'
 
 export const authOptions = {
-  adapter: PrismaAdapter(prisma),
+  // adapter: PrismaAdapter(prisma), // Temporarily disabled
+  session: { strategy: 'jwt' as const },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
