@@ -29,6 +29,7 @@ export default function Dashboard() {
   const [showGAModal, setShowGAModal] = useState(false)
   const [isRealData, setIsRealData] = useState(false)
   const [connectedProperty, setConnectedProperty] = useState<string | null>(null)
+  const [connectedPropertyId, setConnectedPropertyId] = useState<string | null>(null)
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -46,27 +47,65 @@ export default function Dashboard() {
   // Load saved connection and analytics data
   useEffect(() => {
     const savedProperty = sessionStorage.getItem('connectedGAProperty')
-    if (savedProperty) {
+    const savedPropertyId = sessionStorage.getItem('connectedGAPropertyId')
+    if (savedProperty && savedPropertyId) {
       setConnectedProperty(savedProperty)
+      setConnectedPropertyId(savedPropertyId)
+      setIsRealData(true)
+    } else {
+      // Show modal if no GA property is connected
+      setShowGAModal(true)
     }
   }, [])
 
   // Update analytics data when property changes or date range changes
   useEffect(() => {
-    const fetchData = () => {
-      setIsRefreshing(() => true)
-      // Simulate API call delay
-      setTimeout(() => {
-        const data = getAnalyticsData(connectedProperty, selectedDateRange)
-        setAnalyticsData(() => data)
-        setDrillDownData(() => getDrillDownData(connectedProperty))
-        setLastUpdated(() => new Date())
-        setIsRefreshing(() => false)
-      }, 300)
+    const fetchData = async () => {
+      if (!connectedProperty) return
+
+      setIsRefreshing(true)
+      
+      try {
+        if (connectedPropertyId && isRealData) {
+          // Fetch real Google Analytics data
+          console.log('🔍 Dashboard: Fetching real GA data for:', connectedPropertyId)
+          const response = await fetch(`/api/analytics/data?propertyId=${connectedPropertyId}&dateRange=${selectedDateRange}`)
+          const result = await response.json()
+          
+          if (response.ok) {
+            setAnalyticsData(result.data)
+            setIsRealData(result.isReal)
+            console.log('✅ Dashboard: Got analytics data:', result.isReal ? 'Real' : 'Demo')
+          } else {
+            console.error('❌ Dashboard: Analytics API error:', result.error)
+            // Fallback to demo data
+            const demoData = getAnalyticsData(connectedProperty, selectedDateRange)
+            setAnalyticsData(demoData)
+            setIsRealData(false)
+          }
+        } else {
+          // Use demo data
+          console.log('🔍 Dashboard: Using demo data')
+          const demoData = getAnalyticsData(connectedProperty, selectedDateRange)
+          setAnalyticsData(demoData)
+          setIsRealData(false)
+        }
+        
+        setDrillDownData(getDrillDownData(connectedProperty))
+        setLastUpdated(new Date())
+      } catch (error) {
+        console.error('❌ Dashboard: Failed to fetch analytics data:', error)
+        // Fallback to demo data
+        const demoData = getAnalyticsData(connectedProperty, selectedDateRange)
+        setAnalyticsData(demoData)
+        setIsRealData(false)
+      } finally {
+        setIsRefreshing(false)
+      }
     }
 
     fetchData()
-  }, [connectedProperty, selectedDateRange])
+  }, [connectedProperty, connectedPropertyId, selectedDateRange, isRealData])
 
   // Real-time data refresh every 30 seconds
   useEffect(() => {
@@ -142,8 +181,13 @@ export default function Dashboard() {
 
   const handleGAConnect = (propertyId: string, propertyName: string) => {
     setConnectedProperty(propertyName)
+    setConnectedPropertyId(propertyId)
+    setIsRealData(true)
+    
     // Save to sessionStorage so it persists during the browser session
     sessionStorage.setItem('connectedGAProperty', propertyName)
+    sessionStorage.setItem('connectedGAPropertyId', propertyId)
+    
     // Broadcast change to other users
     broadcastStateChange({ connectedProperty: propertyName })
     console.log('Connected to GA property:', propertyId, propertyName)
@@ -215,6 +259,25 @@ export default function Dashboard() {
                 <span>Customize</span>
               </button>
               
+              {/* Data Source Indicator */}
+              <div className={`flex items-center space-x-2 px-2 py-1 rounded text-xs ${
+                isRealData 
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' 
+                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
+              }`}>
+                <div className={`w-2 h-2 rounded-full ${isRealData ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                <span>{isRealData ? 'Live Data' : 'Demo Data'}</span>
+                {!isRealData && (
+                  <button 
+                    onClick={openModal} 
+                    className="ml-1 underline hover:no-underline"
+                    title="Connect to Google Analytics"
+                  >
+                    Connect
+                  </button>
+                )}
+              </div>
+
               {/* Refresh Indicator */}
               <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
                 <div className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'}`}></div>

@@ -48,7 +48,7 @@ async function refreshAccessToken(token: any) { // eslint-disable-line @typescri
 // import { prisma } from '@/lib/prisma'
 
 export const authOptions = {
-  // adapter: PrismaAdapter(prisma), // Temporarily disabled
+  // adapter: PrismaAdapter(prisma), // Temporarily disabled until Prisma connection is fixed
   session: { strategy: 'jwt' as const },
   providers: [
     GoogleProvider({

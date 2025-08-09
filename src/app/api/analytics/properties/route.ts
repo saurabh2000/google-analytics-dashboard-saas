@@ -1,9 +1,22 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { getGoogleAnalyticsProperties } from '@/lib/google-analytics'
 
 export async function GET() {
   try {
     console.log('🔍 Properties API: Attempting to fetch Google Analytics properties...')
+    
+    // First check session info
+    const session = await getServerSession(authOptions)
+    console.log('🔍 Properties API: Session info:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userEmail: session?.user?.email,
+      hasAccessToken: !!session?.accessToken,
+      hasRefreshToken: !!session?.refreshToken,
+      accessTokenLength: session?.accessToken ? (session.accessToken as string).length : 0,
+    })
     
     // Try to get real Google Analytics properties
     try {

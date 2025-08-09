@@ -9,6 +9,14 @@ export async function GET(req: NextRequest) {
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    
+    // Get organization ID from query params
+    const { searchParams } = new URL(req.url)
+    const organizationId = searchParams.get('organizationId')
+    
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 })
+    }
 
     // Get user from database
     let user = await prisma.user.findUnique({
@@ -26,16 +34,44 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // Get user's dashboards
-    const userDashboards = await prisma.dashboard.findMany({
-      where: { userId: user.id },
-      include: {
-        widgets: true
-      },
-      orderBy: { updatedAt: 'desc' }
+    // Verify user has access to this organization
+    const { Client } = require('pg')
+    const client = new Client({
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_NAME || 'analytics_db',
+      user: process.env.DB_USER || 'saurabkshaah',
     })
 
-    return NextResponse.json({ dashboards: userDashboards })
+    await client.connect()
+    
+    const memberCheck = await client.query(`
+      SELECT role FROM "OrganizationMember" 
+      WHERE "userId" = $1 AND "organizationId" = $2
+    `, [user.id, organizationId])
+    
+    if (memberCheck.rows.length === 0) {
+      await client.end()
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Get organization's dashboards
+    const dashboards = await client.query(`
+      SELECT d.*, 
+        COUNT(w.id) as widget_count
+      FROM "Dashboard" d
+      LEFT JOIN "Widget" w ON d.id = w."dashboardId"
+      WHERE d."organizationId" = $1
+      GROUP BY d.id
+      ORDER BY d."updatedAt" DESC
+    `, [organizationId])
+
+    await client.end()
+
+    return NextResponse.json({ 
+      dashboards: dashboards.rows,
+      userRole: memberCheck.rows[0].role 
+    })
   } catch (error) {
     console.error('Error fetching dashboards:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

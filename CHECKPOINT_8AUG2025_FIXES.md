@@ -36,6 +36,7 @@ Successfully resolved all critical issues identified during testing and integrat
 - **Solution**: Temporarily switched to JWT session strategy
 - **File**: `src/lib/auth.ts`
 - **Status**: Working but needs permanent fix
+- **Update (Aug 9)**: Attempted to re-enable database sessions but Prisma P1010 error persists, reverted to JWT
 
 ---
 

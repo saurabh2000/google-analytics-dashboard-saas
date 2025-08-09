@@ -83,11 +83,27 @@ export default function GoogleAnalyticsModal({
     }
   }
 
-  const handleSignIn = () => {
-    signIn('google', { 
-      callbackUrl: window.location.href,
-      redirect: false
-    })
+  const handleSignIn = async () => {
+    try {
+      // Sign out first to clear any existing session
+      await fetch('/api/auth/signout', { method: 'POST' })
+      
+      // Clear local storage
+      sessionStorage.removeItem('connectedGAProperty')
+      sessionStorage.removeItem('connectedGAPropertyId')
+      
+      // Force re-consent to get Analytics permissions
+      const authUrl = new URL('/api/auth/signin/google', window.location.origin)
+      authUrl.searchParams.set('callbackUrl', window.location.href)
+      window.location.href = authUrl.toString()
+    } catch (error) {
+      console.error('Error during sign-in process:', error)
+      // Fallback: just redirect to sign in
+      signIn('google', { 
+        callbackUrl: window.location.href,
+        redirect: true
+      })
+    }
   }
 
   if (!isOpen) return null
@@ -155,6 +171,27 @@ export default function GoogleAnalyticsModal({
                     </p>
                   </div>
                 </div>
+
+                {/* Demo Data Warning */}
+                {!isReal && !loading && (
+                  <div className="flex items-start space-x-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        Analytics Access Required
+                      </p>
+                      <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                        To view real Google Analytics data, you need to grant Analytics permissions. Click below to reconnect with the required permissions.
+                      </p>
+                      <button
+                        onClick={handleSignIn}
+                        className="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-3 py-1.5 rounded transition-colors"
+                      >
+                        Grant Analytics Access
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Loading State */}
                 {loading && (
