@@ -5,9 +5,9 @@ import { useSession, signIn, signOut } from 'next-auth/react'
 
 export default function DebugPage() {
   const { data: session, status } = useSession()
-  const [sessionInfo, setSessionInfo] = useState<any>(null)
-  const [propertiesInfo, setPropertiesInfo] = useState<any>(null)
-  const [gaTestInfo, setGaTestInfo] = useState<any>(null)
+  const [sessionInfo, setSessionInfo] = useState<Record<string, unknown> | null>(null)
+  const [propertiesInfo, setPropertiesInfo] = useState<Record<string, unknown> | null>(null)
+  const [gaTestInfo, setGaTestInfo] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(false)
 
   const checkSession = async () => {

@@ -29,7 +29,7 @@ export async function GET() {
       refresh_token: session.refreshToken as string
     })
 
-    const results: any = {
+    const results: { session: { hasAccessToken: boolean; hasRefreshToken: boolean; user?: string }; tests: Record<string, unknown> } = {
       session: {
         hasAccessToken: !!session.accessToken,
         hasRefreshToken: !!session.refreshToken,
@@ -50,7 +50,7 @@ export async function GET() {
       results.tests.adminApiAccess = {
         success: true,
         accountsFound: accountsResponse.data.accounts?.length || 0,
-        accounts: accountsResponse.data.accounts?.map((acc: any) => ({
+        accounts: accountsResponse.data.accounts?.map((acc: { name: string; displayName: string }) => ({
           name: acc.name,
           displayName: acc.displayName
         })) || []
@@ -69,7 +69,7 @@ export async function GET() {
             const accountProperties = propertiesResponse.data.properties || []
             console.log(`✅ GA Debug: Found ${accountProperties.length} properties for ${account.displayName}`)
             
-            allProperties.push(...accountProperties.map((prop: any) => ({
+            allProperties.push(...accountProperties.map((prop: { name?: string; displayName?: string; propertyType?: string; createTime?: string; updateTime?: string }) => ({
               accountName: account.displayName,
               name: prop.name || '',
               displayName: prop.displayName || '',
@@ -122,7 +122,7 @@ export async function GET() {
         success: true,
         note: 'Data API is accessible'
       }
-    } catch (dataError: any) {
+    } catch (dataError: unknown) {
       console.log('🔍 GA Debug: Data API test (expected to fail with dummy property):', dataError.message)
       
       // Check if it's just a property not found error (which means API is working)

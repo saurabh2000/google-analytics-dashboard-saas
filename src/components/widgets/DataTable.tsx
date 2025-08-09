@@ -8,13 +8,13 @@ interface Column {
   key: string
   label: string
   sortable?: boolean
-  format?: (value: any) => string
+  format?: (value: unknown) => string
   width?: string
 }
 
 interface DataTableProps {
   title: string
-  data: Record<string, any>[]
+  data: Record<string, unknown>[]
   columns: Column[]
   pageSize?: number
   searchable?: boolean

@@ -30,7 +30,7 @@ function CounterCard({
   trend,
   showTrend = true 
 }: {
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   title: string
   value: number
   change?: number

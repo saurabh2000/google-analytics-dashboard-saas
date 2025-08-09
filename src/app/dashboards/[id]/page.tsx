@@ -12,7 +12,7 @@ interface Dashboard {
   name: string
   description: string
   widgets: WidgetConfig[]
-  layout: any
+  layout: Record<string, unknown>
   isDefault: boolean
   updatedAt: string
 }

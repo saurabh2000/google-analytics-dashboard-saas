@@ -12,7 +12,7 @@ interface Dashboard {
   isDefault: boolean
   createdAt: string
   updatedAt: string
-  widgets: any[]
+  widgets: Record<string, unknown>[]
 }
 
 export default function DashboardsPage() {

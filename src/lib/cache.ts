@@ -8,7 +8,7 @@ interface CacheItem<T> {
 }
 
 class Cache {
-  private store: Map<string, CacheItem<any>>
+  private store: Map<string, CacheItem<unknown>>
   private defaultTTL: number
 
   constructor(defaultTTL = 5 * 60 * 1000) { // 5 minutes default
@@ -126,7 +126,7 @@ export const cacheKeys = {
 }
 
 // Decorator for caching function results
-export function withCache<T extends (...args: any[]) => Promise<any>>(
+export function withCache<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   keyGenerator: (...args: Parameters<T>) => string,
   ttl?: number

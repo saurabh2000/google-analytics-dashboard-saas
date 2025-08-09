@@ -125,7 +125,7 @@ class RateLimiter {
 export const rateLimiter = new RateLimiter()
 
 // Higher-order function to wrap API calls with rate limiting
-export function withRateLimit<T extends (...args: any[]) => Promise<any>>(
+export function withRateLimit<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   limitKey: string
 ): T {
@@ -136,7 +136,7 @@ export function withRateLimit<T extends (...args: any[]) => Promise<any>>(
     try {
       // Execute the original function
       return await fn(...args)
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Check for rate limit errors from the API
       if (error.status === 429 || error.code === 'RATE_LIMIT_EXCEEDED') {
         const retryAfter = error.retryAfter || 60

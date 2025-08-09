@@ -45,7 +45,7 @@ function WidgetSkeleton() {
 
 interface WidgetFactoryProps {
   config: WidgetConfig
-  data?: any
+  data?: Record<string, unknown>
   onEdit?: () => void
   onDelete?: () => void
 }
