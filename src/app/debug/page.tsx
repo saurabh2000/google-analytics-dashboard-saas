@@ -175,7 +175,7 @@ export default function DebugPage() {
             <li>Sign in with a Google account that has access to Google Analytics</li>
             <li>Check that the session has access and refresh tokens</li>
             <li>Test the Properties API to see if it can fetch real GA properties</li>
-            <li>If you see "No valid session or access token found", the OAuth flow needs to be fixed</li>
+            <li>If you see &quot;No valid session or access token found&quot;, the OAuth flow needs to be fixed</li>
             <li>If you see Google API errors, check the console for detailed error messages</li>
           </ol>
 

@@ -161,7 +161,7 @@ function TenantOnboarding() {
               Welcome to {tenant?.name}! 👋
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-400">
-              Let's get you started with your analytics dashboard. Choose a path below to begin.
+              Let&apos;s get you started with your analytics dashboard. Choose a path below to begin.
             </p>
           </div>
 
@@ -397,7 +397,7 @@ function TenantOnboarding() {
                 Need Help? 🤝
               </h2>
               <p className="text-gray-600 dark:text-gray-400">
-                We're here to help you succeed with your analytics journey
+                We&apos;re here to help you succeed with your analytics journey
               </p>
             </div>
 

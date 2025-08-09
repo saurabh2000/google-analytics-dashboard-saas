@@ -159,7 +159,7 @@ function SettingsSection({
 }: {
   title: string
   description: string
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   children: React.ReactNode
 }) {
   return (
@@ -231,7 +231,7 @@ export default function AdminSettingsPage() {
     }, 2000)
   }
 
-  const updateSettings = (section: keyof AdminSettings, field: string, value: any) => {
+  const updateSettings = (section: keyof AdminSettings, field: string, value: unknown) => {
     if (!settings) return
     
     setSettings({
@@ -298,7 +298,7 @@ export default function AdminSettingsPage() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'general' | 'security' | 'database' | 'email' | 'notifications' | 'api' | 'ui')}
                 className={`${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
@@ -932,7 +932,7 @@ export default function AdminSettingsPage() {
                     className="rounded border-gray-300"
                   />
                   <label htmlFor="show-branding" className="ml-3 text-sm text-gray-700">
-                    Show "Powered by" branding
+                    Show &quot;Powered by&quot; branding
                   </label>
                 </div>
               </SettingsSection>

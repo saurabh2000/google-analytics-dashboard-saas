@@ -182,7 +182,7 @@ function MetricCard({
   title: string
   value: number
   change?: number
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   trend?: 'up' | 'down' | 'stable'
   format?: 'number' | 'percentage' | 'ms' | 'mb' | 'gb'
   color?: string
@@ -461,7 +461,7 @@ export default function SystemPage() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'overview' | 'performance' | 'alerts' | 'config')}
                 className={`${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'

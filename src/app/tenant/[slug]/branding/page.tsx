@@ -239,7 +239,7 @@ function TenantBranding() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        Remove "Powered by" footer
+                        Remove &quot;Powered by&quot; footer
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         Hide branding from reports and exports
@@ -460,7 +460,7 @@ function TenantBranding() {
                           Your Analytics Summary
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                          Here's how your website performed this week.
+                          Here&apos;s how your website performed this week.
                         </p>
                         <button 
                           className="text-white px-4 py-2 rounded text-sm"

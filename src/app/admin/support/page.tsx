@@ -148,7 +148,7 @@ function MetricCard({
 }: {
   title: string
   value: number
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   format?: 'number' | 'hours' | 'rating'
   color?: string
   subtitle?: string

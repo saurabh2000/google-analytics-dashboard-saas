@@ -29,7 +29,7 @@ export default function ErrorFallback({ error, reset }: ErrorFallbackProps) {
         </h1>
         
         <p className="mt-2 text-sm text-center text-gray-600">
-          We're sorry for the inconvenience. An unexpected error has occurred.
+          We&apos;re sorry for the inconvenience. An unexpected error has occurred.
         </p>
 
         {process.env.NODE_ENV === 'development' && (

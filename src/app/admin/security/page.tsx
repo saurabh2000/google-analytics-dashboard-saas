@@ -37,7 +37,7 @@ interface SecurityEvent {
   location?: string
   timestamp: Date
   resolved: boolean
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 interface SecurityMetrics {
@@ -163,7 +163,7 @@ function MetricCard({
 }: {
   title: string
   value: number
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   color?: string
   format?: 'number' | 'percentage'
   status?: 'good' | 'warning' | 'critical'
@@ -545,7 +545,7 @@ export default function SecurityPage() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'overview' | 'events' | 'api_keys' | 'compliance')}
                 className={`${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'

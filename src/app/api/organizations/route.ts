@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Use raw query to ensure trigger works
-    const { Client } = require('pg')
+    const { Client } = await import('pg')
     const client = new Client({
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 5432,
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user, create if doesn't exist using raw query
-    const { Client } = require('pg')
+    const { Client } = await import('pg')
     const client = new Client({
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 5432,
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
     // Create organization
 
     // Generate unique slug
-    let baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
     let slug = baseSlug
     let counter = 1
     

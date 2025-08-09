@@ -38,7 +38,7 @@ interface Alert {
   updatedAt: Date
   resolvedAt?: Date
   acknowledgedBy?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   threshold?: {
     metric: string
     condition: '>' | '<' | '==' | '!='
@@ -230,7 +230,7 @@ function MetricCard({
 }: {
   title: string
   value: number
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   color?: string
   onClick?: () => void
 }) {
@@ -451,7 +451,7 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [alertRules, setAlertRules] = useState<AlertRule[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'alerts' | 'rules' | 'settings'>('alerts')
+  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'rules' | 'settings'>('overview')
   const [severityFilter, setSeverityFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
@@ -592,7 +592,7 @@ export default function AlertsPage() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'overview' | 'history' | 'rules' | 'settings')}
                 className={`${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
@@ -612,7 +612,7 @@ export default function AlertsPage() {
         </div>
 
         <div className="p-6">
-          {activeTab === 'alerts' && (
+          {activeTab === 'overview' && (
             <div className="space-y-4">
               {/* Filters */}
               <div className="flex items-center space-x-4">

@@ -111,7 +111,7 @@ function MetricCard({
   title: string
   value: number
   change?: number
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   trend?: 'up' | 'down' | 'stable'
   format?: 'number' | 'currency' | 'percentage'
   color?: string

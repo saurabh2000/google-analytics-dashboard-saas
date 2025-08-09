@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify user has access to this organization
-    const { Client } = require('pg')
+    const { Client } = await import('pg')
     const client = new Client({
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 5432,

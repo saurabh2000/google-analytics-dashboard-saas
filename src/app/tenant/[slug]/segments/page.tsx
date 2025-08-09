@@ -309,7 +309,7 @@ function TenantSegments() {
                         Targeting Suggestion
                       </div>
                       <div className="text-xs text-blue-600 dark:text-blue-400">
-                        Create campaigns for "Returning Visitors" segment
+                        Create campaigns for &quot;Returning Visitors&quot; segment
                       </div>
                     </div>
                   </div>
@@ -337,7 +337,7 @@ function TenantSegments() {
                         New Segment Idea
                       </div>
                       <div className="text-xs text-purple-600 dark:text-purple-400">
-                        Consider creating "Weekend Browsers" segment
+                        Consider creating &quot;Weekend Browsers&quot; segment
                       </div>
                     </div>
                   </div>
