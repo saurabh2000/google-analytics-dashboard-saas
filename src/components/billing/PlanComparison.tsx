@@ -1,203 +1,261 @@
 'use client'
 
-import { useState } from 'react'
-import { subscriptionPlans, formatPrice, type StripePlan } from '@/lib/stripe'
+import { useState, useEffect } from 'react'
+import { Check, X, Star, ArrowRight } from 'lucide-react'
+import { subscriptionPlans, StripePlan, formatPrice } from '@/lib/stripe-client'
 
 interface PlanComparisonProps {
-  currentPlan?: string
-  onSelectPlan?: (plan: StripePlan) => void
+  currentPlanId?: string
+  onPlanSelect?: (plan: StripePlan) => void
+  showUpgradeButton?: boolean
   className?: string
 }
 
-export default function PlanComparison({ 
-  currentPlan, 
-  onSelectPlan, 
-  className = '' 
-}: PlanComparisonProps) {
-  const [billingCycle, setBillingCycle] = useState<'month' | 'year'>('month')
+interface PlanFeature {
+  name: string
+  included: boolean
+  description?: string
+}
 
-  const handlePlanSelection = (plan: StripePlan) => {
-    if (onSelectPlan) {
-      onSelectPlan(plan)
+export default function PlanComparison({
+  currentPlanId,
+  onPlanSelect,
+  showUpgradeButton = true,
+  className = ''
+}: PlanComparisonProps) {
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const [plans, setPlans] = useState<StripePlan[]>([])
+
+  useEffect(() => {
+    // Fetch plans from API or use local data
+    setPlans(subscriptionPlans)
+  }, [])
+
+  const getFeatureStatus = (plan: StripePlan, feature: string): PlanFeature => {
+    const isIncluded = plan.features.some(f => 
+      f.toLowerCase().includes(feature.toLowerCase())
+    )
+    
+    return {
+      name: feature,
+      included: isIncluded,
+      description: isIncluded ? plan.features.find(f => 
+        f.toLowerCase().includes(feature.toLowerCase())
+      ) : undefined
     }
   }
 
-  const isCurrentPlan = (planId: string) => {
-    return planId === currentPlan
+  const commonFeatures = [
+    'Basic Analytics Dashboard',
+    'Data Export (CSV)',
+    'Email Support',
+    'Mobile Responsive',
+    'Real-time Updates'
+  ]
+
+  const handlePlanSelect = (plan: StripePlan) => {
+    setSelectedPlan(plan.id)
+    onPlanSelect?.(plan)
+  }
+
+  const isCurrentPlan = (planId: string) => planId === currentPlanId
+  const canUpgrade = (plan: StripePlan) => {
+    if (!currentPlanId) return true
+    const currentPlan = plans.find(p => p.id === currentPlanId)
+    if (!currentPlan) return true
+    return plan.price > currentPlan.price
   }
 
   return (
-    <div className={className}>
-      {/* Billing Toggle */}
-      <div className="flex justify-center mb-8">
-        <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
-          <button
-            onClick={() => setBillingCycle('month')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              billingCycle === 'month'
-                ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-300'
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setBillingCycle('year')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              billingCycle === 'year'
-                ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-300'
-            }`}
-          >
-            Yearly
-            <span className="ml-1 text-green-600 dark:text-green-400 text-xs">Save 20%</span>
-          </button>
-        </div>
+    <div className={`w-full ${className}`}>
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          Choose Your Plan
+        </h2>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          Select the perfect plan for your analytics needs. All plans include our core features with additional capabilities as you scale.
+        </p>
       </div>
 
-      {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {subscriptionPlans.map((plan) => {
-          const yearlyPrice = Math.round(plan.price * 12 * 0.8) // 20% discount
-          const displayPrice = billingCycle === 'year' ? yearlyPrice : plan.price
-          const pricePerMonth = billingCycle === 'year' ? Math.round(yearlyPrice / 12) : plan.price
-
+      {/* Plan Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {plans.map((plan) => {
+          const isCurrent = isCurrentPlan(plan.id)
+          const canUpgradePlan = canUpgrade(plan)
+          
           return (
             <div
               key={plan.id}
-              className={`relative rounded-2xl p-8 ${
-                plan.popular 
-                  ? 'bg-gradient-to-b from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/40 border-2 border-blue-500 shadow-lg scale-105' 
-                  : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md'
-              } ${
-                isCurrentPlan(plan.id) ? 'ring-2 ring-green-500' : ''
-              } transition-all duration-300 hover:shadow-lg`}
+              className={`relative rounded-lg border-2 p-6 transition-all duration-200 ${
+                plan.popular
+                  ? 'border-blue-500 bg-blue-50 shadow-lg scale-105'
+                  : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+              } ${isCurrent ? 'ring-2 ring-green-500' : ''}`}
             >
+              {/* Popular Badge */}
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                    <Star className="w-4 h-4" />
                     Most Popular
                   </span>
                 </div>
               )}
 
-              {isCurrentPlan(plan.id) && (
-                <div className="absolute -top-4 right-4">
-                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+              {/* Current Plan Badge */}
+              {isCurrent && (
+                <div className="absolute -top-3 right-4">
+                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">
                     Current Plan
                   </span>
                 </div>
               )}
 
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              {/* Plan Header */}
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
                   {plan.name}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                <p className="text-gray-600 text-sm mb-4">
                   {plan.description}
                 </p>
-                
                 <div className="mb-4">
-                  <div className="flex items-baseline justify-center">
-                    <span className="text-4xl font-bold text-gray-900 dark:text-white">
-                      {formatPrice(pricePerMonth)}
-                    </span>
-                    <span className="text-gray-500 dark:text-gray-400 ml-2">
-                      /month
-                    </span>
-                  </div>
-                  {billingCycle === 'year' && (
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {formatPrice(displayPrice)} billed yearly
-                      <span className="text-green-600 dark:text-green-400 ml-1 font-medium">
-                        (Save {formatPrice(plan.price * 12 - yearlyPrice)})
-                      </span>
-                    </div>
-                  )}
+                  <span className="text-4xl font-bold text-gray-900">
+                    {formatPrice(plan.price)}
+                  </span>
+                  <span className="text-gray-600">/{plan.interval}</span>
                 </div>
               </div>
 
-              <div className="space-y-4 mb-8">
-                <div className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider">
-                  What&apos;s included:
+              {/* Plan Limits */}
+              <div className="mb-6 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Users:</span>
+                  <span className="font-medium">
+                    {plan.limits.maxUsers === -1 ? 'Unlimited' : `Up to ${plan.limits.maxUsers}`}
+                  </span>
                 </div>
-                {plan.features.map((feature, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-0.5">
-                      <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <span className="text-gray-700 dark:text-gray-300 text-sm">
-                      {feature}
-                    </span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Dashboards:</span>
+                  <span className="font-medium">
+                    {plan.limits.maxDashboards === -1 ? 'Unlimited' : `Up to ${plan.limits.maxDashboards}`}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Data Sources:</span>
+                  <span className="font-medium">
+                    {plan.limits.maxDataSources === -1 ? 'Unlimited' : `Up to ${plan.limits.maxDataSources}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              {showUpgradeButton && (
+                <button
+                  onClick={() => handlePlanSelect(plan)}
+                  disabled={isCurrent || !canUpgradePlan}
+                  className={`w-full py-3 px-4 rounded-lg font-medium transition-colors duration-200 ${
+                    isCurrent
+                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                      : canUpgradePlan
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isCurrent ? 'Current Plan' : canUpgradePlan ? 'Upgrade Now' : 'Downgrade Not Available'}
+                </button>
+              )}
+
+              {/* Plan Features */}
+              <div className="mt-6 space-y-3">
+                <h4 className="font-semibold text-gray-900 mb-3">Key Features:</h4>
+                {plan.features.slice(0, 6).map((feature, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-gray-700">{feature}</span>
                   </div>
                 ))}
+                {plan.features.length > 6 && (
+                  <div className="text-sm text-gray-500 text-center pt-2">
+                    +{plan.features.length - 6} more features
+                  </div>
+                )}
               </div>
-
-              <button
-                onClick={() => handlePlanSelection(plan)}
-                disabled={isCurrentPlan(plan.id)}
-                className={`w-full py-3 px-6 rounded-lg font-semibold text-center transition-all duration-300 ${
-                  isCurrentPlan(plan.id)
-                    ? 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                    : plan.popular
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
-                    : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 shadow-md hover:shadow-lg'
-                }`}
-              >
-                {isCurrentPlan(plan.id) ? 'Current Plan' : `Get ${plan.name}`}
-              </button>
-
-              {plan.limits && (
-                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                    Plan Limits
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {plan.limits.maxUsers === -1 ? '∞' : plan.limits.maxUsers}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Users</div>
-                    </div>
-                    <div>
-                      <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {plan.limits.maxDashboards === -1 ? '∞' : plan.limits.maxDashboards}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Dashboards</div>
-                    </div>
-                    <div>
-                      <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {plan.limits.maxDataSources === -1 ? '∞' : plan.limits.maxDataSources}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Sources</div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )
         })}
       </div>
 
-      {/* FAQ or Additional Info */}
-      <div className="mt-12 text-center">
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          All plans include 14-day free trial • No setup fees • Cancel anytime
+      {/* Feature Comparison Table */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Detailed Feature Comparison
+          </h3>
         </div>
-        <div className="mt-4 space-x-6 text-sm">
-          <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">
-            Compare all features →
-          </a>
-          <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">
-            Contact sales
-          </a>
-          <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">
-            View FAQ
-          </a>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Feature
+                </th>
+                {plans.map((plan) => (
+                  <th key={plan.id} className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {plan.name}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {commonFeatures.map((feature) => (
+                <tr key={feature}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {feature}
+                  </td>
+                  {plans.map((plan) => {
+                    const featureStatus = getFeatureStatus(plan, feature)
+                    return (
+                      <td key={plan.id} className="px-6 py-4 whitespace-nowrap text-center">
+                        {featureStatus.included ? (
+                          <Check className="w-5 h-5 text-green-500 mx-auto" />
+                        ) : (
+                          <X className="w-5 h-5 text-red-500 mx-auto" />
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
+
+      {/* Plan Selection Summary */}
+      {selectedPlan && (
+        <div className="mt-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-lg font-semibold text-blue-900 mb-2">
+                Selected Plan: {plans.find(p => p.id === selectedPlan)?.name}
+              </h4>
+              <p className="text-blue-700">
+                {plans.find(p => p.id === selectedPlan)?.description}
+              </p>
+            </div>
+            <button
+              onClick={() => onPlanSelect?.(plans.find(p => p.id === selectedPlan)!)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors duration-200"
+            >
+              Continue to Checkout
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

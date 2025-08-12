@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { TenantProvider, useTenant } from '@/components/tenant/TenantProvider'
 import TenantDashboardHeader from '@/components/tenant/TenantDashboardHeader'
-import { subscriptionPlans, type StripePlan, type StripeSubscription, stripeService, formatPrice } from '@/lib/stripe'
+import { subscriptionPlans, type StripePlan, type StripeSubscription, formatPrice } from '@/lib/stripe-client'
 
 // Inner billing component that uses tenant context
 function TenantBilling() {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { subscriptionPlans, getPlanByPriceId, formatPrice } from '@/lib/stripe'
+import { subscriptionPlans, getPlanByPriceId, formatPrice } from '@/lib/stripe-client'
 
 export default function CheckoutDemoPage() {
   const searchParams = useSearchParams()

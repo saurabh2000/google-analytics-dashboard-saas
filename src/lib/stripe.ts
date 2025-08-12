@@ -1,337 +1,362 @@
-// Stripe billing integration for subscription management
+import Stripe from 'stripe'
+import { 
+  StripePlan, 
+  StripeCustomer, 
+  StripeSubscription, 
+  subscriptionPlans as basePlans,
+  getPlanById as getBasePlanById,
+  getPlanByPriceId as getBasePlanByPriceId
+} from './stripe-client'
+
+// Server-only Stripe configuration
 export interface StripeConfig {
   publishableKey: string
   secretKey: string
   webhookSecret: string
 }
 
-export interface StripePlan {
-  id: string
-  name: string
-  description: string
-  priceId: string
-  price: number
-  currency: string
-  interval: 'month' | 'year'
-  features: string[]
-  limits: {
-    maxUsers: number
-    maxDashboards: number
-    maxDataSources: number
-  }
-  popular?: boolean
+// Get subscription plans with actual environment variable price IDs
+function getSubscriptionPlans(): StripePlan[] {
+  return basePlans.map(plan => ({
+    ...plan,
+    priceId: (() => {
+      switch (plan.id) {
+        case 'starter':
+          return process.env.STRIPE_PRICE_STARTER_MONTHLY || plan.priceId
+        case 'professional':
+          return process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY || plan.priceId
+        case 'enterprise':
+          return process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || plan.priceId
+        default:
+          return plan.priceId
+      }
+    })()
+  }))
 }
-
-export interface StripeCustomer {
-  id: string
-  tenantId: string
-  stripeCustomerId: string
-  email: string
-  name?: string
-  created: Date
-}
-
-export interface StripeSubscription {
-  id: string
-  tenantId: string
-  stripeSubscriptionId: string
-  stripeCustomerId: string
-  plan: StripePlan
-  status: 'active' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'trialing' | 'unpaid'
-  currentPeriodStart: Date
-  currentPeriodEnd: Date
-  cancelAtPeriodEnd: boolean
-  created: Date
-  updated: Date
-}
-
-// Available subscription plans
-export const subscriptionPlans: StripePlan[] = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    description: 'Perfect for small teams getting started with analytics',
-    priceId: 'price_starter_monthly', // Replace with actual Stripe price ID
-    price: 29,
-    currency: 'USD',
-    interval: 'month',
-    features: [
-      'Basic Analytics Dashboard',
-      'Up to 5 users',
-      'Up to 3 dashboards',
-      'Email support',
-      'Data export (CSV)',
-      'Basic A/B testing'
-    ],
-    limits: {
-      maxUsers: 5,
-      maxDashboards: 3,
-      maxDataSources: 2
-    }
-  },
-  {
-    id: 'professional',
-    name: 'Professional',
-    description: 'Advanced features for growing businesses',
-    priceId: 'price_professional_monthly',
-    price: 99,
-    currency: 'USD',
-    interval: 'month',
-    features: [
-      'Everything in Starter',
-      'Up to 25 users',
-      'Up to 10 dashboards',
-      'Advanced cohort analysis',
-      'User segmentation',
-      'Custom alerts & notifications',
-      'API access',
-      'Priority support',
-      'Advanced A/B testing with statistical significance'
-    ],
-    limits: {
-      maxUsers: 25,
-      maxDashboards: 10,
-      maxDataSources: 5
-    },
-    popular: true
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    description: 'Complete solution for large organizations',
-    priceId: 'price_enterprise_monthly',
-    price: 299,
-    currency: 'USD',
-    interval: 'month',
-    features: [
-      'Everything in Professional',
-      'Unlimited users',
-      'Unlimited dashboards',
-      'White-label branding',
-      'Custom integrations',
-      'Advanced analytics & reporting',
-      'Real-time collaboration',
-      'Dedicated account manager',
-      'Custom training & onboarding',
-      'SLA guarantee'
-    ],
-    limits: {
-      maxUsers: -1, // Unlimited
-      maxDashboards: -1,
-      maxDataSources: -1
-    }
-  }
-]
 
 // Stripe service class for handling billing operations
 export class StripeService {
+  private stripe: Stripe
   private stripeConfig: StripeConfig
 
   constructor(config: StripeConfig) {
     this.stripeConfig = config
-  }
-
-  // Create a new customer
-  async createCustomer(tenantId: string, email: string, name?: string): Promise<StripeCustomer> {
-    // In a real implementation, this would call Stripe API
-    const mockCustomer: StripeCustomer = {
-      id: `customer_${Date.now()}`,
-      tenantId,
-      stripeCustomerId: `cus_mock_${Date.now()}`,
-      email,
-      name,
-      created: new Date()
+    
+    // Initialize Stripe with proper configuration
+    if (!config.secretKey || config.secretKey === 'sk_test_mock') {
+      throw new Error('Stripe secret key is required and must be a valid key')
     }
-
-    // Store customer in database
-    // await this.storeCustomer(mockCustomer)
-
-    return mockCustomer
+    
+    this.stripe = new Stripe(config.secretKey, {
+      apiVersion: '2024-12-18.acacia',
+      typescript: true
+    })
   }
 
-  // Create a subscription checkout session
+  async createCustomer(tenantId: string, email: string, name?: string): Promise<StripeCustomer> {
+    try {
+      const customer = await this.stripe.customers.create({
+        email,
+        name,
+        metadata: {
+          tenantId
+        }
+      })
+
+      return {
+        id: customer.id,
+        tenantId,
+        stripeCustomerId: customer.id,
+        email: customer.email!,
+        name: customer.name || undefined,
+        created: new Date(customer.created * 1000)
+      }
+    } catch (error) {
+      console.error('Error creating Stripe customer:', error)
+      throw new Error(`Failed to create customer: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
   async createCheckoutSession(
     customerId: string, 
     priceId: string, 
     successUrl: string, 
     cancelUrl: string
   ): Promise<{ sessionId: string; checkoutUrl: string }> {
-    // Mock checkout session for demo
-    const sessionId = `cs_mock_${Date.now()}`
-    const checkoutUrl = `/billing/checkout-demo?session=${sessionId}&price=${priceId}`
+    try {
+      const session = await this.stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1
+          }
+        ],
+        mode: 'subscription',
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        allow_promotion_codes: true,
+        billing_address_collection: 'required',
+        customer_update: {
+          address: 'auto',
+          name: 'auto'
+        }
+      })
 
-    return {
-      sessionId,
-      checkoutUrl
+      return {
+        sessionId: session.id,
+        checkoutUrl: session.url!
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error)
+      throw new Error(`Failed to create checkout session: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
-  // Get subscription by tenant ID
   async getSubscription(tenantId: string): Promise<StripeSubscription | null> {
-    // Special handling for demo organization - Enterprise plan
-    const planId = tenantId === 'demo' || tenantId === 'demo-org' ? 'enterprise' : 'professional'
-    const plan = subscriptionPlans.find(p => p.id === planId)
-    if (!plan) return null
+    try {
+      // First find the customer for this tenant
+      const customers = await this.stripe.customers.list({
+        limit: 100,
+        metadata: { tenantId }
+      })
 
-    const mockSubscription: StripeSubscription = {
-      id: `sub_${Date.now()}`,
-      tenantId,
-      stripeSubscriptionId: `sub_mock_${Date.now()}`,
-      stripeCustomerId: `cus_mock_${Date.now()}`,
-      plan,
-      status: 'active',
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + (tenantId === 'demo' || tenantId === 'demo-org' ? 365 : 30) * 24 * 60 * 60 * 1000),
-      cancelAtPeriodEnd: false,
-      created: new Date(),
-      updated: new Date()
+      if (customers.data.length === 0) {
+        return null
+      }
+
+      const customer = customers.data[0]
+      
+      // Get active subscriptions for this customer
+      const subscriptions = await this.stripe.subscriptions.list({
+        customer: customer.id,
+        status: 'all',
+        limit: 1
+      })
+
+      if (subscriptions.data.length === 0) {
+        return null
+      }
+
+      const subscription = subscriptions.data[0]
+      const plan = this.getPlanByPriceId(subscription.items.data[0].price.id)
+
+      if (!plan) {
+        throw new Error(`Unknown price ID: ${subscription.items.data[0].price.id}`)
+      }
+
+      return {
+        id: subscription.id,
+        tenantId,
+        stripeSubscriptionId: subscription.id,
+        stripeCustomerId: customer.id,
+        plan,
+        status: subscription.status as any,
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        created: new Date(subscription.created * 1000),
+        updated: new Date(subscription.updated * 1000)
+      }
+    } catch (error) {
+      console.error('Error getting subscription:', error)
+      return null
     }
-
-    return mockSubscription
   }
 
-  // Update subscription (upgrade/downgrade)
   async updateSubscription(subscriptionId: string, newPriceId: string): Promise<StripeSubscription> {
-    // Mock subscription update
-    const plan = subscriptionPlans.find(p => p.priceId === newPriceId)
-    if (!plan) {
-      throw new Error('Invalid price ID')
-    }
+    try {
+      const subscription = await this.stripe.subscriptions.retrieve(subscriptionId)
+      const newPlan = this.getPlanByPriceId(newPriceId)
 
-    const mockSubscription: StripeSubscription = {
-      id: subscriptionId,
-      tenantId: 'mock-tenant',
-      stripeSubscriptionId: `sub_mock_${Date.now()}`,
-      stripeCustomerId: `cus_mock_${Date.now()}`,
-      plan,
-      status: 'active',
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      cancelAtPeriodEnd: false,
-      created: new Date(),
-      updated: new Date()
-    }
+      if (!newPlan) {
+        throw new Error(`Unknown price ID: ${newPriceId}`)
+      }
 
-    return mockSubscription
+      // Update the subscription with the new price
+      const updatedSubscription = await this.stripe.subscriptions.update(subscriptionId, {
+        items: [
+          {
+            id: subscription.items.data[0].id,
+            price: newPriceId
+          }
+        ],
+        proration_behavior: 'create_prorations'
+      })
+
+      return {
+        id: updatedSubscription.id,
+        tenantId: subscription.metadata.tenantId || '',
+        stripeSubscriptionId: updatedSubscription.id,
+        stripeCustomerId: updatedSubscription.customer as string,
+        plan: newPlan,
+        status: updatedSubscription.status as any,
+        currentPeriodStart: new Date(updatedSubscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000),
+        cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
+        created: new Date(updatedSubscription.created * 1000),
+        updated: new Date(updatedSubscription.updated * 1000)
+      }
+    } catch (error) {
+      console.error('Error updating subscription:', error)
+      throw new Error(`Failed to update subscription: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
   }
 
-  // Cancel subscription
   async cancelSubscription(subscriptionId: string, cancelAtPeriodEnd: boolean = true): Promise<StripeSubscription> {
-    // Mock cancellation
-    const subscription = await this.getSubscription('mock-tenant')
-    if (!subscription) {
-      throw new Error('Subscription not found')
-    }
+    try {
+      let updatedSubscription: Stripe.Subscription
 
-    return {
-      ...subscription,
-      status: cancelAtPeriodEnd ? 'active' : 'canceled',
-      cancelAtPeriodEnd,
-      updated: new Date()
+      if (cancelAtPeriodEnd) {
+        updatedSubscription = await this.stripe.subscriptions.update(subscriptionId, {
+          cancel_at_period_end: true
+        })
+      } else {
+        updatedSubscription = await this.stripe.subscriptions.cancel(subscriptionId)
+      }
+
+      const plan = this.getPlanByPriceId(updatedSubscription.items.data[0].price.id)
+
+      if (!plan) {
+        throw new Error(`Unknown price ID: ${updatedSubscription.items.data[0].price.id}`)
+      }
+
+      return {
+        id: updatedSubscription.id,
+        tenantId: updatedSubscription.metadata.tenantId || '',
+        stripeSubscriptionId: updatedSubscription.id,
+        stripeCustomerId: updatedSubscription.customer as string,
+        plan,
+        status: updatedSubscription.status as any,
+        currentPeriodStart: new Date(updatedSubscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000),
+        cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
+        created: new Date(updatedSubscription.created * 1000),
+        updated: new Date(updatedSubscription.updated * 1000)
+      }
+    } catch (error) {
+      console.error('Error canceling subscription:', error)
+      throw new Error(`Failed to cancel subscription: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
-  // Handle webhook events
-  async handleWebhook(event: any): Promise<void> { // eslint-disable-line @typescript-eslint/no-explicit-any
-    switch (event.type) {
-      case 'customer.subscription.created':
-        await this.handleSubscriptionCreated(event.data.object)
-        break
-      case 'customer.subscription.updated':
-        await this.handleSubscriptionUpdated(event.data.object)
-        break
-      case 'customer.subscription.deleted':
-        await this.handleSubscriptionDeleted(event.data.object)
-        break
-      case 'invoice.payment_succeeded':
-        await this.handlePaymentSucceeded(event.data.object)
-        break
-      case 'invoice.payment_failed':
-        await this.handlePaymentFailed(event.data.object)
-        break
-      default:
-        console.log(`Unhandled event type: ${event.type}`)
+  async handleWebhook(event: Stripe.Event): Promise<void> {
+    try {
+      switch (event.type) {
+        case 'customer.subscription.created':
+          await this.handleSubscriptionCreated(event.data.object as Stripe.Subscription)
+          break
+        case 'customer.subscription.updated':
+          await this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+          break
+        case 'customer.subscription.deleted':
+          await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+          break
+        case 'invoice.payment_succeeded':
+          await this.handlePaymentSucceeded(event.data.object as Stripe.Invoice)
+          break
+        case 'invoice.payment_failed':
+          await this.handlePaymentFailed(event.data.object as Stripe.Invoice)
+          break
+        default:
+          console.log(`Unhandled event type: ${event.type}`)
+      }
+    } catch (error) {
+      console.error('Error handling webhook:', error)
+      throw error
     }
   }
 
-  private async handleSubscriptionCreated(subscription: any): Promise<void> { // eslint-disable-line @typescript-eslint/no-explicit-any
+  private async handleSubscriptionCreated(subscription: Stripe.Subscription): Promise<void> {
     console.log('Subscription created:', subscription.id)
-    // Update tenant subscription status in database
+    // TODO: Update tenant subscription status in database
   }
 
-  private async handleSubscriptionUpdated(subscription: any): Promise<void> { // eslint-disable-line @typescript-eslint/no-explicit-any
+  private async handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
     console.log('Subscription updated:', subscription.id)
-    // Update tenant subscription details in database
+    // TODO: Update tenant subscription status in database
   }
 
-  private async handleSubscriptionDeleted(subscription: any): Promise<void> { // eslint-disable-line @typescript-eslint/no-explicit-any
+  private async handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
     console.log('Subscription deleted:', subscription.id)
-    // Handle subscription cancellation
+    // TODO: Update tenant subscription status in database
   }
 
-  private async handlePaymentSucceeded(invoice: any): Promise<void> { // eslint-disable-line @typescript-eslint/no-explicit-any
-    console.log('Payment succeeded:', invoice.id)
-    // Update payment status, extend subscription
+  private async handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
+    console.log('Payment succeeded for invoice:', invoice.id)
+    // TODO: Update tenant billing status in database
   }
 
-  private async handlePaymentFailed(invoice: any): Promise<void> { // eslint-disable-line @typescript-eslint/no-explicit-any
-    console.log('Payment failed:', invoice.id)
-    // Handle failed payment, send notifications
+  private async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+    console.log('Payment failed for invoice:', invoice.id)
+    // TODO: Update tenant billing status and send notification
   }
 
-  // Get usage statistics for billing
   async getUsageStats(tenantId: string): Promise<{
     users: number
     dashboards: number
     dataSources: number
     apiCalls: number
   }> {
-    // Mock usage stats
+    // TODO: Implement actual usage tracking from database
     return {
-      users: 12,
-      dashboards: 5,
-      dataSources: 3,
-      apiCalls: 1250
+      users: 0,
+      dashboards: 0,
+      dataSources: 0,
+      apiCalls: 0
     }
   }
 
-  // Calculate prorated amount for plan changes
   calculateProratedAmount(
     currentPlan: StripePlan, 
     newPlan: StripePlan, 
     daysRemaining: number
   ): number {
-    const currentDailyRate = currentPlan.price / 30
+    const currentDailyRate = currentPlan.price / 30 // Assuming monthly billing
     const newDailyRate = newPlan.price / 30
-    const difference = (newDailyRate - currentDailyRate) * daysRemaining
+    const dailyDifference = newDailyRate - currentDailyRate
     
-    return Math.max(0, difference)
+    return Math.round(dailyDifference * daysRemaining * 100) / 100
+  }
+
+  // Get Stripe instance for direct API calls
+  getStripeInstance(): Stripe {
+    return this.stripe
+  }
+
+  // Instance methods for plan lookup
+  getPlanById(planId: string): StripePlan | null {
+    return getSubscriptionPlans().find(plan => plan.id === planId) || null
+  }
+
+  getPlanByPriceId(priceId: string): StripePlan | null {
+    return getSubscriptionPlans().find(plan => plan.priceId === priceId) || null
+  }
+
+  getSubscriptionPlans(): StripePlan[] {
+    return getSubscriptionPlans()
   }
 }
 
-// Utility functions
-export function getPlanById(planId: string): StripePlan | null {
-  return subscriptionPlans.find(plan => plan.id === planId) || null
+// Utility function to create Stripe service instance (server-side only)
+export function createStripeService(): StripeService {
+  if (typeof window !== 'undefined') {
+    throw new Error('StripeService should only be used on the server side')
+  }
+
+  const config: StripeConfig = {
+    publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || ''
+  }
+
+  if (!config.secretKey || config.secretKey === 'sk_test_mock') {
+    throw new Error('Stripe secret key is required and must be a valid key')
+  }
+
+  return new StripeService(config)
 }
 
-export function getPlanByPriceId(priceId: string): StripePlan | null {
-  return subscriptionPlans.find(plan => plan.priceId === priceId) || null
-}
-
-export function formatPrice(price: number, currency: string = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency
-  }).format(price)
-}
-
-export function isFeatureIncluded(plan: StripePlan, feature: string): boolean {
-  return plan.features.some(f => f.toLowerCase().includes(feature.toLowerCase()))
-}
-
-// Default Stripe service instance (mock for demo)
-export const stripeService = new StripeService({
-  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_mock',
-  secretKey: process.env.STRIPE_SECRET_KEY || 'sk_test_mock',
-  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock'
-})
+// Export types for use in other files
+export type { StripePlan, StripeCustomer, StripeSubscription }

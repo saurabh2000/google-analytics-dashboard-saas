@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
+// Define role hierarchy
+const roleHierarchy = {
+  SUPER_ADMIN: 4,
+  ADMIN: 3,
+  TENANT_OWNER: 2,
+  USER: 1
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   
@@ -19,8 +27,11 @@ export async function middleware(request: NextRequest) {
     pathname === route || pathname.startsWith('/api/auth/')
   )
   
-  // Skip authentication for public routes and static files
-  if (isPublicRoute || pathname.includes('_next') || pathname.includes('.')) {
+  // All admin routes use direct JWT authentication (bypass NextAuth completely)
+  const isAdminRoute = pathname.startsWith('/admin/') || pathname.startsWith('/api/admin/')
+  
+  // Skip authentication for public routes, admin routes (handled separately), and static files
+  if (isPublicRoute || isAdminRoute || pathname.includes('_next') || pathname.includes('.')) {
     return NextResponse.next()
   }
   
@@ -34,50 +45,62 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl)
   }
   
-  // Redirect old routes to organization-based routes
+  // Role-based dashboard routing
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
-    return NextResponse.redirect(new URL('/org', request.url))
+    const userRole = (token as any).role
+    
+    // Admin users go to admin dashboard
+    if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+      return NextResponse.redirect(new URL('/admin/dashboard', request.url))
+    }
+    
+    // Tenant owners go to their tenant dashboard
+    if (userRole === 'TENANT_OWNER' && (token as any).tenantId) {
+      // In production, we'd fetch the tenant slug from the database
+      // For now, redirect to a generic tenant route
+      return NextResponse.redirect(new URL('/tenant/dashboard', request.url))
+    }
+    
+    // Regular users stay on the user dashboard
+    if (userRole === 'USER') {
+      // Allow access to /dashboard for regular users
+      return NextResponse.next()
+    }
+    
+    // Default fallback to main page if no role is determined
+    return NextResponse.redirect(new URL('/', request.url))
   }
   
-  // Admin routes require admin role
-  if (pathname.startsWith('/admin')) {
-    // For now, we'll check if the user email matches admin emails
-    // In production, this should check user roles from database
-    const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(email => email.trim().toLowerCase()) || []
-    const userEmail = (token.email as string)?.toLowerCase()
+  // Admin routes handle their own authentication, skip NextAuth checks
+  // This is already handled by the admin route bypass above, but kept for clarity
+  
+  // Tenant-specific routes require tenant membership
+  if (pathname.startsWith('/org/')) {
+    const tenantSlug = pathname.split('/')[2]
+    const userTenantId = (token as any).tenantId
     
-    console.log('Admin check:', {
-      pathname,
-      userEmail,
-      adminEmails,
-      hasAccess: adminEmails.includes(userEmail)
-    })
-    
-    if (!adminEmails.includes(userEmail)) {
+    // TODO: In production, verify tenant slug matches user's tenant
+    if (!userTenantId && tenantSlug !== 'default') {
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
   }
   
-  // Tenant-based routing
-  // Extract tenant from subdomain or path
-  const host = request.headers.get('host') || ''
-  const subdomain = host.split('.')[0]
-  
-  // If using subdomain-based multi-tenancy
-  if (subdomain && subdomain !== 'www' && subdomain !== 'localhost:3000') {
-    // Add tenant info to headers for use in the app
-    const requestHeaders = new Headers(request.headers)
-    requestHeaders.set('x-tenant-id', subdomain)
-    
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    })
+  // Check if user account is active
+  if ((token as any).isActive === false) {
+    return NextResponse.redirect(new URL('/auth/account-suspended', request.url))
   }
   
-  // For path-based multi-tenancy (e.g., /tenant/[tenantId]/dashboard)
-  // This would be handled by the routing system
+  // Add user info to headers for server components
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-user-id', token.sub || '')
+  requestHeaders.set('x-user-role', (token as any).role || 'USER')
+  requestHeaders.set('x-tenant-id', (token as any).tenantId || '')
+  
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
   
   return NextResponse.next()
 }

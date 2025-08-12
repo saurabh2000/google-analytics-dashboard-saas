@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -20,14 +20,15 @@ import {
   Menu,
   X
 } from 'lucide-react'
-import { useSession, signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 const navigation = [
   {
-    name: 'Overview',
-    href: '/admin',
+    name: 'Dashboard',
+    href: '/admin/dashboard',
     icon: BarChart3,
-    description: 'System-wide analytics and metrics'
+    description: 'System overview and key metrics'
   },
   {
     name: 'Users',
@@ -42,22 +43,28 @@ const navigation = [
     description: 'Manage client organizations'
   },
   {
-    name: 'Payments',
-    href: '/admin/payments',
-    icon: CreditCard,
-    description: 'Billing, subscriptions, and transactions'
+    name: 'Analytics',
+    href: '/admin/analytics',
+    icon: Activity,
+    description: 'Platform usage and performance metrics'
   },
   {
-    name: 'System',
-    href: '/admin/system',
-    icon: Database,
-    description: 'System health and configuration'
+    name: 'Billing',
+    href: '/admin/billing',
+    icon: CreditCard,
+    description: 'Billing, subscriptions, and transactions'
   },
   {
     name: 'Security',
     href: '/admin/security',
     icon: Shield,
     description: 'Security logs and compliance'
+  },
+  {
+    name: 'System',
+    href: '/admin/system',
+    icon: Database,
+    description: 'System health and configuration'
   },
   {
     name: 'Support',
@@ -91,14 +98,93 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
   const pathname = usePathname()
   const { data: session } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/admin/verify')
+        const data = await response.json()
+        
+        if (!data.success) {
+          router.push('/admin/login')
+        } else {
+          setIsAuthenticated(true)
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
+        router.push('/admin/login')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // Skip auth check for login page
+    if (!pathname.startsWith('/admin/login')) {
+      checkAuth()
+    } else {
+      setLoading(false)
+    }
+  }, [pathname, router])
+
+  // For login page, don't show loading state or check auth
+  if (pathname.startsWith('/admin/login')) {
+    return <>{children}</>
+  }
 
   const isActive = (href: string) => {
-    if (href === '/admin') {
-      return pathname === '/admin'
+    if (href === '/admin/dashboard') {
+      return pathname === '/admin' || pathname === '/admin/dashboard'
     }
     return pathname.startsWith(href)
+  }
+
+  const handleAdminLogout = async () => {
+    try {
+      // Call logout API endpoint
+      const response = await fetch('/api/admin/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        // Clear any local state
+        setIsAuthenticated(false)
+        // Force redirect to admin login using window.location to clear all state
+        window.location.href = '/admin/login'
+      } else {
+        console.error('Logout failed')
+        // Still try to redirect even if logout fails
+        window.location.href = '/admin/login'
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Force redirect on error
+      window.location.href = '/admin/login'
+    }
+  }
+
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render admin layout if not authenticated
+  if (!isAuthenticated) {
+    return null
   }
 
   return (
@@ -186,7 +272,7 @@ export default function AdminLayout({
                 </p>
               </div>
               <button
-                onClick={() => signOut()}
+                onClick={handleAdminLogout}
                 className="ml-3 p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
                 title="Sign out"
               >

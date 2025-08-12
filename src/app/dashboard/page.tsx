@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
+import Link from 'next/link'
 // import GAConnectionModal from '@/components/analytics/GAConnectionModal' // TODO: Use GA connection modal
 import LineChart from '@/components/charts/LineChart'
 import BarChart from '@/components/charts/BarChart'
@@ -12,9 +13,6 @@ import KpiCard from '@/components/dashboard/KpiCard'
 import CustomizationPanel from '@/components/dashboard/CustomizationPanel'
 import UserJourneyFlow from '@/components/analytics/UserJourneyFlow'
 import JourneySourceSelector from '@/components/analytics/JourneySourceSelector'
-import ActiveUsers from '@/components/collaboration/ActiveUsers'
-import ActivityFeed from '@/components/collaboration/ActivityFeed'
-import AlertPanel from '@/components/alerts/AlertPanel'
 import GoogleAnalyticsModal from '@/components/analytics/GoogleAnalyticsModal'
 import { getAnalyticsData, fetchAnalyticsData, type AnalyticsData } from '@/lib/analytics-data'
 import { getDrillDownData, getAvailableKpiCards } from '@/lib/drill-down-data'
@@ -25,7 +23,7 @@ export default function Dashboard() {
   const [selectedDateRange, setSelectedDateRange] = useState('30d')
   const { data: session } = useSession()
 
-  // Dashboard is now the main entry point - no redirect needed
+  // Personal dashboard for regular users
   const [showGAModal, setShowGAModal] = useState(false)
   const [isRealData, setIsRealData] = useState(false)
   const [connectedProperty, setConnectedProperty] = useState<string | null>(null)
@@ -39,9 +37,6 @@ export default function Dashboard() {
   const [drillDownData, setDrillDownData] = useState(() => getDrillDownData(null))
   const [selectedJourneySource, setSelectedJourneySource] = useState('reddit-ads')
   const [collaborationConnected, setCollaborationConnected] = useState(false)
-
-  // Alert system state
-  const [showAlertPanel, setShowAlertPanel] = useState(false)
 
   // Load saved connection and analytics data
   useEffect(() => {
@@ -189,22 +184,28 @@ export default function Dashboard() {
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-                Analytics Dashboard
-              </h1>
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mr-3">
+                <span className="text-white font-bold text-lg">A</span>
+              </div>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  Personal Analytics
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Welcome back, {session?.user?.name || 'User'}
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
-              {/* Active Users */}
-              <ActiveUsers className="hidden md:block" />
-              
-              {/* Alerts Button */}
-              <button
-                onClick={() => setShowAlertPanel(true)}
-                className="flex items-center space-x-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 px-3 py-2 rounded-lg text-sm transition-colors border border-red-200 dark:border-red-800"
-              >
-                <span>🔔</span>
-                <span>Alerts</span>
-              </button>
+              {/* Navigation Links */}
+              <div className="hidden md:flex items-center space-x-4 text-sm">
+                <Link href="/pricing" className="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors">
+                  Upgrade Plan
+                </Link>
+                <Link href="/profile" className="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors">
+                  Profile
+                </Link>
+              </div>
               
               {/* Customize Button */}
               <button
@@ -484,6 +485,43 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Upgrade Prompt for Personal Users */}
+        {session?.user && !(session.user as any).tenantId && (
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xl">🚀</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Ready to grow your team?
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Upgrade to a team plan for collaboration, A/B testing, and advanced analytics features.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Link 
+                    href="/pricing"
+                    className="px-4 py-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm"
+                  >
+                    View Plans
+                  </Link>
+                  <Link 
+                    href="/auth/register?plan=startup"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Start Team Trial
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* GA Connection Banner */}
         {!connectedProperty ? (
           <div className="mt-8 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
@@ -594,16 +632,6 @@ export default function Dashboard() {
         isOpen={showCustomizationPanel}
         onClose={() => setShowCustomizationPanel(false)}
       />
-
-      {/* Alert Panel */}
-      <AlertPanel
-        isOpen={showAlertPanel}
-        onClose={() => setShowAlertPanel(false)}
-        analyticsData={analyticsData}
-      />
-
-      {/* Activity Feed for Collaboration */}
-      <ActivityFeed />
     </div>
   )
 }

@@ -1,44 +1,77 @@
+import { webhookHandler } from '@/lib/webhook-handlers'
 import { NextRequest, NextResponse } from 'next/server'
-import { stripeService } from '@/lib/stripe'
-import { headers } from 'next/headers'
+import Stripe from 'stripe'
 
 export async function POST(req: NextRequest) {
-  const body = await req.text()
-  const signature = req.headers.get('stripe-signature')
-
-  if (!signature) {
-    return NextResponse.json(
-      { error: 'Missing Stripe signature' },
-      { status: 400 }
-    )
-  }
-
   try {
-    // In a real implementation, verify the webhook signature with Stripe
-    // const event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET)
-    
-    // Mock event for demo purposes
-    const event = JSON.parse(body)
-    
-    console.log('Received Stripe webhook:', event.type)
+    const body = await req.text()
+    const signature = req.headers.get('stripe-signature')
 
-    // Handle the webhook event
-    await stripeService.handleWebhook(event)
+    if (!signature) {
+      console.error('Missing Stripe signature header')
+      return NextResponse.json(
+        { error: 'Missing Stripe signature' },
+        { status: 400 }
+      )
+    }
 
-    return NextResponse.json({ received: true })
+    let event: Stripe.Event
+
+    try {
+      // Verify webhook signature
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+      if (!webhookSecret) {
+        console.error('STRIPE_WEBHOOK_SECRET not configured')
+        return NextResponse.json(
+          { error: 'Webhook secret not configured' },
+          { status: 500 }
+        )
+      }
+
+      event = Stripe.webhooks.constructEvent(body, signature, webhookSecret)
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err)
+      return NextResponse.json(
+        { error: 'Invalid signature' },
+        { status: 400 }
+      )
+    }
+
+    console.log(`Received Stripe webhook: ${event.type} (ID: ${event.id})`)
+
+    // Process the webhook event
+    await webhookHandler.handleWebhookEvent(event)
+
+    return NextResponse.json({ 
+      received: true,
+      eventType: event.type,
+      eventId: event.id
+    })
   } catch (error) {
-    console.error('Webhook error:', error)
+    console.error('Error processing webhook:', error)
+    
+    // Return appropriate error response
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { 
+          error: 'Webhook processing failed',
+          message: error.message 
+        },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Webhook handler failed' },
-      { status: 400 }
+      { error: 'Webhook processing failed' },
+      { status: 500 }
     )
   }
 }
 
-// Handle GET requests (for webhook endpoint verification)
 export async function GET() {
-  return NextResponse.json({ 
+  return NextResponse.json({
     message: 'Stripe webhook endpoint is active',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    status: 'healthy'
   })
 }
