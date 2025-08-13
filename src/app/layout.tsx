@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Google Analytics Dashboard SaaS",
   description: "Transform your Google Analytics data into beautiful, actionable insights",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({

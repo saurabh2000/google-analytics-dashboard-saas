@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { sendVerificationEmail, isEmailServiceConfigured } from '@/lib/email'
 
 // Validation schema
 const registerSchema = z.object({
@@ -130,21 +131,34 @@ export async function POST(request: NextRequest) {
       }
     })
     
-    // TODO: Send welcome email
+    // Send verification email
+    if (isEmailServiceConfigured() && user.email) {
+      try {
+        await sendVerificationEmail(user.email, user.name, user.id)
+        console.log(`📧 Verification email sent to ${user.email}`)
+      } catch (emailError) {
+        console.error('❌ Failed to send verification email:', emailError)
+        // Don't fail registration if email fails
+      }
+    } else {
+      console.log('⚠️ Email service not configured, skipping verification email')
+    }
     
     return NextResponse.json({
-      message: 'Registration successful',
+      message: 'Registration successful. Please check your email to verify your account.',
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        emailVerified: user.emailVerified
       },
       tenant: tenant ? {
         id: tenant.id,
         name: tenant.name,
         slug: tenant.slug
-      } : null
+      } : null,
+      requiresEmailVerification: isEmailServiceConfigured() && !user.emailVerified
     })
     
   } catch (error) {

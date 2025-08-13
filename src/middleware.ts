@@ -13,25 +13,32 @@ const roleHierarchy = {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   
+  // Skip middleware entirely for static files and Next.js internals
+  if (pathname.includes('_next') || pathname.includes('.') || pathname.startsWith('/favicon')) {
+    return NextResponse.next()
+  }
+  
   // Define public routes that don't require authentication
   const publicRoutes = [
     '/',
     '/auth/signin',
+    '/auth/register',
     '/auth/error',
     '/auth/verify-request',
-    '/api/auth'
+    '/auth/verify-email',
+    '/auth/resend-verification',
+    '/auth/reset-password',
+    '/unauthorized'
   ]
   
   // Check if the current route is public
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname === route || pathname.startsWith('/api/auth/')
-  )
+  const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith('/api/auth/')
   
   // All admin routes use direct JWT authentication (bypass NextAuth completely)
   const isAdminRoute = pathname.startsWith('/admin/') || pathname.startsWith('/api/admin/')
   
-  // Skip authentication for public routes, admin routes (handled separately), and static files
-  if (isPublicRoute || isAdminRoute || pathname.includes('_next') || pathname.includes('.')) {
+  // Skip authentication for public routes and admin routes
+  if (isPublicRoute || isAdminRoute) {
     return NextResponse.next()
   }
   
@@ -48,34 +55,43 @@ export async function middleware(request: NextRequest) {
   // Role-based dashboard routing
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
     const userRole = (token as any).role
+    const userEmail = (token as any).email
     
-    // Admin users go to admin dashboard
-    if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+    console.log('🔍 Middleware - Dashboard access check:', {
+      pathname,
+      userRole,
+      userEmail,
+      tokenKeys: Object.keys(token)
+    })
+    
+    // Check if user is explicitly in ADMIN_EMAILS environment variable
+    const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(email => email.trim()) || []
+    const isExplicitAdmin = userEmail && adminEmails.includes(userEmail)
+    
+    // Only redirect to admin dashboard if user is explicitly listed as admin
+    if (isExplicitAdmin && (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN')) {
+      console.log('🔀 Middleware - Redirecting explicit admin to admin dashboard')
       return NextResponse.redirect(new URL('/admin/dashboard', request.url))
     }
     
     // Tenant owners go to their tenant dashboard
     if (userRole === 'TENANT_OWNER' && (token as any).tenantId) {
+      console.log('🔀 Middleware - Redirecting tenant owner to tenant dashboard')
       // In production, we'd fetch the tenant slug from the database
       // For now, redirect to a generic tenant route
       return NextResponse.redirect(new URL('/tenant/dashboard', request.url))
     }
     
-    // Regular users stay on the user dashboard
-    if (userRole === 'USER') {
-      // Allow access to /dashboard for regular users
-      return NextResponse.next()
-    }
-    
-    // Default fallback to main page if no role is determined
-    return NextResponse.redirect(new URL('/', request.url))
+    // All other users (including those with SUPER_ADMIN role but not in ADMIN_EMAILS) go to user dashboard
+    console.log('✅ Middleware - Allowing user access to dashboard')
+    return NextResponse.next()
   }
   
   // Admin routes handle their own authentication, skip NextAuth checks
   // This is already handled by the admin route bypass above, but kept for clarity
   
   // Tenant-specific routes require tenant membership
-  if (pathname.startsWith('/org/')) {
+  if (pathname.startsWith('/tenant/')) {
     const tenantSlug = pathname.split('/')[2]
     const userTenantId = (token as any).tenantId
     

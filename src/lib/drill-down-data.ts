@@ -462,70 +462,96 @@ export const getAvailableKpiCards = () => {
       name: 'Total Users',
       icon: '👥',
       color: 'blue',
-      enabled: true
+      enabled: true,
+      type: 'standard'
     },
     {
       id: 'sessions',
       name: 'Sessions',
       icon: '📊',
       color: 'green',
-      enabled: true
+      enabled: true,
+      type: 'standard'
     },
     {
       id: 'page-views',
       name: 'Page Views',
       icon: '📈',
       color: 'purple',
-      enabled: true
+      enabled: true,
+      type: 'standard'
     },
     {
       id: 'avg-session',
       name: 'Avg. Session',
       icon: '⏱️',
       color: 'orange',
-      enabled: true
+      enabled: true,
+      type: 'standard'
     },
     {
       id: 'bounce-rate',
       name: 'Bounce Rate',
       icon: '⚡',
       color: 'red',
-      enabled: false
+      enabled: false,
+      type: 'standard'
     },
     {
       id: 'conversion-rate',
       name: 'Conversion Rate',
       icon: '🎯',
       color: 'green',
-      enabled: false
+      enabled: false,
+      type: 'standard'
     },
     {
       id: 'revenue',
       name: 'Revenue',
       icon: '💰',
-      color: 'yellow',
-      enabled: false
+      color: 'green',
+      enabled: true,
+      type: 'revenue'
+    },
+    {
+      id: 'goals',
+      name: 'Goals & Objectives',
+      icon: '🎯',
+      color: 'purple',
+      enabled: true,
+      type: 'goals'
+    },
+    {
+      id: 'events',
+      name: 'User Events',
+      icon: '⭐',
+      color: 'orange',
+      enabled: true,
+      type: 'events'
+    },
+    {
+      id: 'realtime',
+      name: 'Real-time Users',
+      icon: '🔴',
+      color: 'red',
+      enabled: true,
+      type: 'enhanced'
     },
     {
       id: 'new-users',
       name: 'New Users',
       icon: '🆕',
-      color: 'indigo',
-      enabled: false
+      color: 'blue',
+      enabled: false,
+      type: 'enhanced'
     },
     {
       id: 'returning-users',
       name: 'Returning Users',
       icon: '🔄',
-      color: 'teal',
-      enabled: false
-    },
-    {
-      id: 'events',
-      name: 'Events',
-      icon: '⭐',
-      color: 'pink',
-      enabled: false
+      color: 'green',
+      enabled: false,
+      type: 'enhanced'
     }
   ]
 }

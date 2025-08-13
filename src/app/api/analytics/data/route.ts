@@ -11,9 +11,16 @@ export async function GET(req: NextRequest) {
     console.log('🔍 Analytics Data API: Request params:', { propertyId, dateRange })
 
     if (!propertyId) {
+      console.log('🔍 Analytics Data API: No propertyId provided, returning demo data')
+      const propertyName = searchParams.get('propertyName')
+      const demoData = getAnalyticsData(propertyName, dateRange)
+      
       return NextResponse.json({ 
-        error: 'Property ID is required' 
-      }, { status: 400 })
+        data: demoData,
+        isReal: false,
+        message: 'Demo data - no property connected',
+        source: 'demo_data'
+      })
     }
 
     try {

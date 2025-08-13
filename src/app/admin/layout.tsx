@@ -107,13 +107,28 @@ export default function AdminLayout({
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/admin/verify')
-        const data = await response.json()
-        
-        if (!data.success) {
-          router.push('/admin/login')
-        } else {
+        // First check NextAuth session for admin users
+        if (session?.user && session.user.role === 'SUPER_ADMIN') {
+          console.log('✅ NextAuth admin user detected, skipping JWT check')
           setIsAuthenticated(true)
+          setLoading(false)
+          return
+        }
+        
+        // If no NextAuth session, check for admin JWT token
+        if (!session?.user) {
+          const response = await fetch('/api/admin/verify')
+          const data = await response.json()
+          
+          if (!data.success) {
+            router.push('/admin/login')
+          } else {
+            setIsAuthenticated(true)
+          }
+        } else {
+          // User has NextAuth session but not admin role - redirect to regular app
+          console.log('❌ User has session but not admin role, redirecting to user dashboard')
+          router.push('/dashboard')
         }
       } catch (error) {
         console.error('Auth check error:', error)
@@ -129,7 +144,7 @@ export default function AdminLayout({
     } else {
       setLoading(false)
     }
-  }, [pathname, router])
+  }, [pathname, router, session])
 
   // For login page, don't show loading state or check auth
   if (pathname.startsWith('/admin/login')) {

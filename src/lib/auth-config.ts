@@ -6,10 +6,14 @@ import bcrypt from 'bcryptjs'
 export const authOptions = {
   // Don't use adapter with credentials provider - causes issues
   session: { strategy: 'jwt' as const },
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
   providers: [
     CredentialsProvider({
-      id: 'admin-credentials',
-      name: 'Admin Credentials',
+      id: 'credentials',
+      name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' }
@@ -25,25 +29,7 @@ export const authOptions = {
           return null
         }
 
-        // Check if this is the admin login
-        if (credentials.email === 'saurabh2000@gmail.com') {
-          console.log('🔍 Checking admin credentials...')
-          if (credentials.password === 'Admin@2025!') {
-            console.log('✅ Admin credentials valid!')
-            // Return admin user object
-            return {
-              id: 'admin-001',
-              email: 'saurabh2000@gmail.com',
-              name: 'Admin User',
-              role: 'SUPER_ADMIN',
-              isAdmin: true
-            }
-          } else {
-            console.log('❌ Admin password incorrect')
-          }
-        }
-
-        // Check database for other users with credentials
+        // Check database for users with credentials
         try {
           console.log('🔍 Checking database for user:', credentials.email)
           const user = await prisma.user.findUnique({
@@ -62,7 +48,8 @@ export const authOptions = {
                 role: user.role,
                 tenantId: user.tenantId,
                 tenant: user.tenant,
-                isActive: user.isActive
+                isActive: user.isActive,
+                emailVerified: user.emailVerified
               }
             }
           }
@@ -94,11 +81,7 @@ export const authOptions = {
         isAdmin: user?.isAdmin 
       })
       
-      // Allow admin credentials sign in
-      if (account?.provider === 'admin-credentials') {
-        console.log('✅ Admin credentials sign in allowed')
-        return true
-      }
+      // All sign-ins are allowed - role assignment happens in session callback
       
       // Check if we have the required environment variables for Google OAuth
       if (account?.provider === 'google') {
@@ -126,15 +109,18 @@ export const authOptions = {
       console.log('🔍 Session callback:', { 
         tokenSub: token.sub, 
         tokenIsAdmin: token.isAdmin,
+        tokenRole: token.role,
         sessionUserEmail: session.user?.email 
       })
       
-      // Handle admin credentials session
-      if (token.isAdmin) {
-        console.log('✅ Setting admin session')
+      // Check if user is in ADMIN_EMAILS environment variable
+      const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(email => email.trim()) || []
+      const isAdminEmail = session.user?.email && adminEmails.includes(session.user.email)
+      
+      if (isAdminEmail) {
+        console.log('✅ Setting admin session based on ADMIN_EMAILS')
         session.user = {
           ...session.user,
-          id: token.sub,
           role: 'SUPER_ADMIN',
           isAdmin: true
         }
@@ -142,14 +128,16 @@ export const authOptions = {
       }
       
       // Fetch user details including role and tenant for database users
-      if (token.sub && token.sub !== 'admin-001') {
+      if (session.user?.email && token.sub !== 'admin-001') {
         try {
+          // For Google OAuth users, look up by email instead of token.sub
           const dbUser = await prisma.user.findUnique({
-            where: { id: token.sub },
+            where: { email: session.user.email },
             include: { tenant: true }
           })
           
           if (dbUser) {
+            console.log('✅ Found database user, assigning DB role:', dbUser.role)
             session.user = {
               ...session.user,
               id: dbUser.id,
@@ -158,9 +146,32 @@ export const authOptions = {
               tenant: dbUser.tenant,
               isActive: dbUser.isActive
             }
+          } else {
+            // If no user found, they're a new Google OAuth user - assign default role
+            console.log('✅ New Google OAuth user, assigning USER role')
+            session.user = {
+              ...session.user,
+              role: 'USER',
+              isActive: true
+            }
           }
         } catch (error) {
           console.error('💥 Error fetching user session:', error)
+          // Default to USER role on error
+          console.log('✅ Database error, defaulting to USER role')
+          session.user = {
+            ...session.user,
+            role: 'USER',
+            isActive: true
+          }
+        }
+      } else {
+        // Ensure there's always a role, even if no email
+        console.log('✅ No email or admin user, ensuring USER role')
+        session.user = {
+          ...session.user,
+          role: session.user?.role || 'USER',
+          isActive: true
         }
       }
       
@@ -175,17 +186,25 @@ export const authOptions = {
         console.log('🔍 JWT callback with user:', { 
           userId: user.id, 
           isAdmin: user.isAdmin,
-          role: user.role 
+          role: user.role,
+          email: user.email 
         })
         
         token.id = user.id
-        // Mark admin users
-        if (user.isAdmin) {
-          console.log('✅ Marking token as admin')
-          token.isAdmin = true
-          token.role = 'SUPER_ADMIN'
-        }
+        token.role = user.role || 'USER'
+        token.tenantId = user.tenantId
+        token.isActive = user.isActive !== false
+        token.email = user.email
+        
+        // Role assignment will be handled in session callback based on ADMIN_EMAILS
       }
+      
+      console.log('🔍 JWT token state:', {
+        hasUser: !!user,
+        tokenRole: token.role,
+        tokenEmail: token.email,
+        provider: account?.provider
+      })
       
       // Handle Google OAuth tokens
       if (account && account.provider === 'google') {
@@ -194,10 +213,7 @@ export const authOptions = {
         token.accessTokenExpires = account.expires_at
       }
       
-      // For admin credentials, skip token refresh
-      if (token.isAdmin) {
-        return token
-      }
+      // Continue with normal token handling
       
       // Return previous token if the access token has not expired yet
       if (Date.now() < (token.accessTokenExpires || 0) * 1000) {

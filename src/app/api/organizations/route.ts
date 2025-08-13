@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { authOptions } from '@/lib/auth-config'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(req: NextRequest) {
@@ -10,50 +10,39 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Use raw query to ensure trigger works
-    const { Client } = await import('pg')
-    const client = new Client({
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME || 'analytics_db',
-      user: process.env.DB_USER || 'saurabkshaah',
+    // Find user in the database
+    let user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { tenant: true }
     })
 
-    await client.connect()
-
-    // Get user from database, create if doesn't exist
-    let userResult = await client.query('SELECT * FROM "User" WHERE email = $1', [session.user.email])
-    let user = userResult.rows[0]
-
+    // Create user if doesn't exist (for Google OAuth users)
     if (!user) {
-      const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      await client.query(
-        'INSERT INTO "User" (id, email, name, image, "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, NOW(), NOW())',
-        [userId, session.user.email, session.user.name, session.user.image]
-      )
-      userResult = await client.query('SELECT * FROM "User" WHERE id = $1', [userId])
-      user = userResult.rows[0]
+      user = await prisma.user.create({
+        data: {
+          email: session.user.email,
+          name: session.user.name || '',
+          image: session.user.image,
+          role: 'USER',
+          isActive: true
+        },
+        include: { tenant: true }
+      })
     }
 
-    // Get user's organizations
-
-    const result = await client.query(`
-      SELECT 
-        o.id,
-        o.name,
-        o.slug,
-        o.logo,
-        om.role
-      FROM "Organization" o
-      INNER JOIN "OrganizationMember" om ON o.id = om."organizationId"
-      WHERE om."userId" = $1
-      ORDER BY o."createdAt" ASC
-    `, [user.id])
-
-    await client.end()
+    // Get user's tenant (organization equivalent)
+    const organizations = user.tenant ? [
+      {
+        id: user.tenant.id,
+        name: user.tenant.name,
+        slug: user.tenant.slug,
+        logo: user.tenant.logo,
+        role: user.role === 'TENANT_OWNER' ? 'owner' : 'member'
+      }
+    ] : []
 
     return NextResponse.json({ 
-      organizations: result.rows,
+      organizations,
       currentUser: {
         id: user.id,
         email: user.email,
@@ -79,31 +68,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Organization name is required' }, { status: 400 })
     }
 
-    // Get user, create if doesn't exist using raw query
-    const { Client } = await import('pg')
-    const client = new Client({
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME || 'analytics_db',
-      user: process.env.DB_USER || 'saurabkshaah',
+    // Find user in the database
+    let user = await prisma.user.findUnique({
+      where: { email: session.user.email }
     })
 
-    await client.connect()
-
-    let userResult = await client.query('SELECT * FROM "User" WHERE email = $1', [session.user.email])
-    let user = userResult.rows[0]
-
+    // Create user if doesn't exist (for Google OAuth users)
     if (!user) {
-      const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      await client.query(
-        'INSERT INTO "User" (id, email, name, image, "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, NOW(), NOW())',
-        [userId, session.user.email, session.user.name, session.user.image]
-      )
-      userResult = await client.query('SELECT * FROM "User" WHERE id = $1', [userId])
-      user = userResult.rows[0]
+      user = await prisma.user.create({
+        data: {
+          email: session.user.email,
+          name: session.user.name || '',
+          image: session.user.image,
+          role: 'USER',
+          isActive: true
+        }
+      })
     }
 
-    // Create organization
+    // Check if user already has a tenant
+    if (user.tenantId) {
+      return NextResponse.json({ 
+        error: 'User already belongs to an organization' 
+      }, { status: 400 })
+    }
 
     // Generate unique slug
     const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
@@ -111,45 +99,39 @@ export async function POST(req: NextRequest) {
     let counter = 1
     
     // Check if slug already exists
-    let slugExists = true
-    while (slugExists) {
-      const checkSlug = await client.query(
-        'SELECT id FROM "Organization" WHERE slug = $1',
-        [slug]
-      )
-      if (checkSlug.rows.length === 0) {
-        slugExists = false
-      } else {
-        slug = `${baseSlug}-${counter}`
-        counter++
-      }
+    while (await prisma.tenant.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${counter}`
+      counter++
     }
     
-    const orgId = `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const memberId = `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    // Create tenant and update user in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create tenant
+      const tenant = await tx.tenant.create({
+        data: {
+          name,
+          slug,
+          settings: {}
+        }
+      })
 
-    await client.query('BEGIN')
-    
-    // Create organization
-    await client.query(`
-      INSERT INTO "Organization" (id, name, slug, settings, "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, NOW(), NOW())
-    `, [orgId, name, slug, JSON.stringify({})])
+      // Update user to be owner of this tenant
+      await tx.user.update({
+        where: { id: user.id },
+        data: { 
+          tenantId: tenant.id,
+          role: 'TENANT_OWNER'
+        }
+      })
 
-    // Add user as owner
-    await client.query(`
-      INSERT INTO "OrganizationMember" (id, "organizationId", "userId", role, "joinedAt")
-      VALUES ($1, $2, $3, 'owner', NOW())
-    `, [memberId, orgId, user.id])
-
-    await client.query('COMMIT')
-    await client.end()
+      return tenant
+    })
 
     return NextResponse.json({ 
       organization: {
-        id: orgId,
-        name,
-        slug,
+        id: result.id,
+        name: result.name,
+        slug: result.slug,
         role: 'owner'
       }
     })

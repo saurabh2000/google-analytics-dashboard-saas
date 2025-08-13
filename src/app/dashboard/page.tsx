@@ -4,16 +4,23 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
+import { Users, Activity, Eye, Clock, Target, DollarSign, TrendingUp } from 'lucide-react'
 // import GAConnectionModal from '@/components/analytics/GAConnectionModal' // TODO: Use GA connection modal
 import LineChart from '@/components/charts/LineChart'
 import BarChart from '@/components/charts/BarChart'
 import PieChart from '@/components/charts/PieChart'
 import DrillDownChart from '@/components/charts/DrillDownChart'
 import KpiCard from '@/components/dashboard/KpiCard'
+import EnhancedKpiCard from '@/components/dashboard/EnhancedKpiCard'
+import RevenueCard from '@/components/dashboard/RevenueCard'
+import GoalsCard from '@/components/dashboard/GoalsCard'
+import EventsCard from '@/components/dashboard/EventsCard'
 import CustomizationPanel from '@/components/dashboard/CustomizationPanel'
 import UserJourneyFlow from '@/components/analytics/UserJourneyFlow'
 import JourneySourceSelector from '@/components/analytics/JourneySourceSelector'
 import GoogleAnalyticsModal from '@/components/analytics/GoogleAnalyticsModal'
+import RealDataFunnel from '@/components/analytics/RealDataFunnel'
+import AnalysisEngine from '@/components/analytics/AnalysisEngine'
 import { getAnalyticsData, fetchAnalyticsData, type AnalyticsData } from '@/lib/analytics-data'
 import { getDrillDownData, getAvailableKpiCards } from '@/lib/drill-down-data'
 import collaborationManager, { type DashboardState } from '@/lib/socket'
@@ -32,32 +39,64 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showCustomizationPanel, setShowCustomizationPanel] = useState(false)
   const [enabledKpiCards, setEnabledKpiCards] = useState<string[]>([
-    'total-users', 'sessions', 'page-views', 'avg-session'
+    'total-users', 'sessions', 'page-views', 'avg-session', 'revenue', 'goals', 'events', 'realtime'
   ])
   const [drillDownData, setDrillDownData] = useState(() => getDrillDownData(null))
   const [selectedJourneySource, setSelectedJourneySource] = useState('reddit-ads')
   const [collaborationConnected, setCollaborationConnected] = useState(false)
+  const [connectedPropertyId, setConnectedPropertyId] = useState<string | null>(null)
 
   // Load saved connection and analytics data
   useEffect(() => {
     const savedProperty = sessionStorage.getItem('connectedGAProperty')
+    const savedPropertyId = sessionStorage.getItem('connectedGAPropertyId')
     if (savedProperty) {
       setConnectedProperty(savedProperty)
+      console.log('🔍 Dashboard: Loaded saved property:', savedProperty, 'ID:', savedPropertyId)
+    }
+    if (savedPropertyId) {
+      setConnectedPropertyId(savedPropertyId)
     }
   }, [])
 
   // Update analytics data when property changes or date range changes
   useEffect(() => {
-    const fetchData = () => {
+    const fetchData = async () => {
       setIsRefreshing(() => true)
-      // Simulate API call delay
-      setTimeout(() => {
+      
+      try {
+        if (connectedProperty) {
+          // Try to get real data from the connected property
+          const storedPropertyId = sessionStorage.getItem('connectedGAPropertyId')
+          if (storedPropertyId) {
+            console.log('🔍 Dashboard: Fetching real GA data for property:', storedPropertyId)
+            const result = await fetchAnalyticsData(storedPropertyId, connectedProperty, selectedDateRange)
+            setAnalyticsData(() => result.data)
+            setIsRealData(() => result.isReal)
+            setDrillDownData(() => getDrillDownData(connectedProperty))
+            setLastUpdated(() => new Date())
+            setIsRefreshing(() => false)
+            return
+          }
+        }
+        
+        // Fallback to demo data if no real property connected
         const data = getAnalyticsData(connectedProperty, selectedDateRange)
         setAnalyticsData(() => data)
+        setIsRealData(() => false)
         setDrillDownData(() => getDrillDownData(connectedProperty))
         setLastUpdated(() => new Date())
         setIsRefreshing(() => false)
-      }, 300)
+      } catch (error) {
+        console.error('❌ Dashboard: Error fetching analytics data:', error)
+        // Fallback to demo data on error
+        const data = getAnalyticsData(connectedProperty, selectedDateRange)
+        setAnalyticsData(() => data)
+        setIsRealData(() => false)
+        setDrillDownData(() => getDrillDownData(connectedProperty))
+        setLastUpdated(() => new Date())
+        setIsRefreshing(() => false)
+      }
     }
 
     fetchData()
@@ -67,7 +106,23 @@ export default function Dashboard() {
   useEffect(() => {
     if (!connectedProperty) return
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
+      if (isRealData) {
+        // For real data, try to fetch fresh data from the API
+        try {
+          const storedPropertyId = sessionStorage.getItem('connectedGAPropertyId')
+          if (storedPropertyId) {
+            const result = await fetchAnalyticsData(storedPropertyId, connectedProperty, selectedDateRange)
+            setAnalyticsData(() => result.data)
+            setLastUpdated(() => new Date())
+            return
+          }
+        } catch (error) {
+          console.warn('⚠️ Dashboard: Failed to refresh real-time data:', error)
+        }
+      }
+      
+      // For demo data or if real data fetch fails, use the existing simulation
       setAnalyticsData(prevData => {
         if (!prevData) return prevData
         
@@ -82,11 +137,11 @@ export default function Dashboard() {
           realTimeUsers: newRealTimeUsers
         }
       })
-      setLastUpdated(() => new Date()) // Use functional update
+      setLastUpdated(() => new Date())
     }, 30000) // Update every 30 seconds
 
     return () => clearInterval(interval)
-  }, [connectedProperty])
+  }, [connectedProperty, selectedDateRange, isRealData])
 
   // Initialize collaboration when user is authenticated
   useEffect(() => {
@@ -137,8 +192,10 @@ export default function Dashboard() {
 
   const handleGAConnect = (propertyId: string, propertyName: string) => {
     setConnectedProperty(propertyName)
+    setConnectedPropertyId(propertyId)
     // Save to sessionStorage so it persists during the browser session
     sessionStorage.setItem('connectedGAProperty', propertyName)
+    sessionStorage.setItem('connectedGAPropertyId', propertyId)
     // Broadcast change to other users
     broadcastStateChange({ connectedProperty: propertyName })
     console.log('Connected to GA property:', propertyId, propertyName)
@@ -218,9 +275,9 @@ export default function Dashboard() {
               
               {/* Refresh Indicator */}
               <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                <div className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'}`}></div>
+                <div className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-yellow-400 animate-pulse' : isRealData ? 'bg-green-400' : 'bg-blue-400'}`}></div>
                 <span>
-                  Updated {lastUpdated.toLocaleTimeString('en-US', { 
+                  {isRealData ? 'Real Data' : 'Demo Mode'} - Updated {lastUpdated.toLocaleTimeString('en-US', { 
                     hour12: false, 
                     hour: '2-digit', 
                     minute: '2-digit', 
@@ -289,11 +346,102 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="px-4 sm:px-6 lg:px-8 py-8">
         {/* Customizable KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-tutorial="kpi-cards">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8" data-tutorial="kpi-cards">
           {enabledKpiCards.map(cardId => {
             const cardConfig = getAvailableKpiCards().find(card => card.id === cardId)
             if (!cardConfig) return null
             
+            // Render different components based on card type
+            if (cardConfig.type === 'revenue') {
+              return (
+                <RevenueCard
+                  key={cardId}
+                  revenue={analyticsData?.revenue?.current || 125000}
+                  growth={analyticsData?.revenue?.change || 12.5}
+                  goal={200000}
+                  isRealData={isRealData}
+                />
+              )
+            }
+            
+            if (cardConfig.type === 'goals') {
+              return (
+                <GoalsCard
+                  key={cardId}
+                  goals={[
+                    {
+                      id: '1',
+                      name: 'Monthly Signups',
+                      target: 500,
+                      current: analyticsData?.users?.current || 347,
+                      deadline: '2024-12-31',
+                      status: 'on-track',
+                      category: 'conversion'
+                    },
+                    {
+                      id: '2',
+                      name: 'Page Views',
+                      target: 50000,
+                      current: analyticsData?.sessions?.current || 42300,
+                      deadline: '2024-12-31',
+                      status: 'on-track',
+                      category: 'traffic'
+                    }
+                  ]}
+                  isRealData={isRealData}
+                />
+              )
+            }
+            
+            if (cardConfig.type === 'events') {
+              return (
+                <EventsCard
+                  key={cardId}
+                  isRealData={isRealData}
+                />
+              )
+            }
+            
+            if (cardConfig.type === 'enhanced') {
+              const getIconComponent = (cardId: string) => {
+                switch (cardId) {
+                  case 'realtime': return <Activity />
+                  case 'new-users': return <Users />
+                  case 'returning-users': return <TrendingUp />
+                  default: return <Activity />
+                }
+              }
+              
+              const getValue = (cardId: string) => {
+                switch (cardId) {
+                  case 'realtime': return Math.floor(Math.random() * 50) + 10
+                  case 'new-users': return analyticsData?.users?.current ? Math.floor(analyticsData.users.current * 0.6) : 1234
+                  case 'returning-users': return analyticsData?.users?.current ? Math.floor(analyticsData.users.current * 0.4) : 856
+                  default: return 0
+                }
+              }
+              
+              return (
+                <EnhancedKpiCard
+                  key={cardId}
+                  id={cardConfig.id}
+                  title={cardConfig.name}
+                  value={getValue(cardId)}
+                  change={Math.random() * 20 - 10}
+                  icon={getIconComponent(cardId)}
+                  color={cardConfig.color as any}
+                  progress={Math.random() * 100}
+                  goal={getValue(cardId) * 1.5}
+                  description={`${cardConfig.name} metrics and trends`}
+                  trend={Array.from({length: 7}, () => Math.random() * 100)}
+                  isCustomizable={true}
+                  onRemove={handleRemoveKpiCard}
+                  analyticsData={analyticsData}
+                />
+              )
+            }
+            
+            // Default standard KPI card
             return (
               <KpiCard
                 key={cardId}
@@ -342,8 +490,10 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">Live Data</span>
+                <div className={`w-3 h-3 rounded-full ${isRealData ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {isRealData ? 'Live Data' : 'Demo Data'}
+                </span>
               </div>
             </div>
             {analyticsData ? (
@@ -464,6 +614,14 @@ export default function Dashboard() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Track user flow from traffic source to event registration with drop-off analysis
                 </p>
+                <div className="flex items-center space-x-2 mt-2">
+                  <span className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-2 py-1 rounded-full">
+                    Simulated Data
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Demonstrative funnel with fictional user journey
+                  </span>
+                </div>
               </div>
               <div className="flex items-center space-x-4">
                 <JourneySourceSelector
@@ -483,6 +641,15 @@ export default function Dashboard() {
               selectedSource={selectedJourneySource}
             />
           </div>
+        </div>
+
+        {/* Real Data Funnel Analysis */}
+        <div className="mb-8" data-tutorial="real-funnel">
+          <RealDataFunnel
+            propertyId={connectedPropertyId}
+            propertyName={connectedProperty}
+            dateRange={selectedDateRange}
+          />
         </div>
 
         {/* Upgrade Prompt for Personal Users */}
@@ -567,63 +734,23 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+        
+        {/* Analytics Intelligence Engine */}
+        <AnalysisEngine 
+          analyticsData={analyticsData}
+          isRealData={isRealData}
+          dateRange={selectedDateRange}
+          propertyName={connectedProperty}
+        />
       </main>
 
-      {/* Simple Modal Test */}
-      {showGAModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50">
-          <div className="flex items-center justify-center min-h-screen p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
-                Connect Google Analytics
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Select a Google Analytics property to connect:
-              </p>
-              
-              <div className="space-y-3 mb-6">
-                <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
-                  <label className="flex items-center">
-                    <input type="radio" name="property" className="mr-3" />
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">My Website</div>
-                      <div className="text-sm text-gray-500">properties/123456789</div>
-                    </div>
-                  </label>
-                </div>
-                
-                <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
-                  <label className="flex items-center">
-                    <input type="radio" name="property" className="mr-3" />
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">E-commerce Site</div>
-                      <div className="text-sm text-gray-500">properties/987654321</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-              
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => {
-                    handleGAConnect('123456789', 'My Website')
-                    setShowGAModal(false)
-                  }}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors"
-                >
-                  Connect
-                </button>
-                <button
-                  onClick={() => setShowGAModal(false)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Google Analytics Modal */}
+      <GoogleAnalyticsModal
+        isOpen={showGAModal}
+        onClose={() => setShowGAModal(false)}
+        onConnect={handleGAConnect}
+        currentProperty={connectedProperty || undefined}
+      />
 
       {/* Customization Panel */}
       <CustomizationPanel

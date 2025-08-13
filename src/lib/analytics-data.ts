@@ -4,12 +4,14 @@ import { apiCache, cacheKeys } from './cache'
 export interface AnalyticsData {
   users: {
     total: number
+    current?: number
     change: number
     trend: number[]
     labels: string[]
   }
   sessions: {
     total: number
+    current?: number
     change: number
     trend: number[]
     labels: string[]
@@ -23,6 +25,11 @@ export interface AnalyticsData {
   avgSessionDuration: {
     total: string
     change: number
+  }
+  revenue?: {
+    current: number
+    change: number
+    total?: number
   }
   topPages: {
     labels: string[]
@@ -184,12 +191,14 @@ export const getAnalyticsData = (propertyName: string | null, dateRange: string 
     return {
       users: {
         total: Math.round(28547 * multiplier),
+        current: Math.round(28547 * multiplier),
         change: 18.7,
         trend: generateTrend(950, dateRange, 0.25),
         labels: generateLabels(dateRange)
       },
       sessions: {
         total: Math.round(45891 * multiplier),
+        current: Math.round(45891 * multiplier),
         change: 15.2,
         trend: generateTrend(1530, dateRange, 0.3),
         labels: generateLabels(dateRange)
@@ -203,6 +212,11 @@ export const getAnalyticsData = (propertyName: string | null, dateRange: string 
       avgSessionDuration: {
         total: '4m 32s',
         change: 8.4
+      },
+      revenue: {
+        current: Math.round(125000 * multiplier),
+        change: 12.5,
+        total: Math.round(125000 * multiplier)
       },
       topPages: {
         labels: ['/products', '/checkout', '/cart', '/product/best-seller', '/category/electronics'],
@@ -226,12 +240,14 @@ export const getAnalyticsData = (propertyName: string | null, dateRange: string 
     return {
       users: {
         total: Math.round(12543 * multiplier),
+        current: Math.round(12543 * multiplier),
         change: 12.5,
         trend: generateTrend(410, dateRange, 0.2),
         labels: generateLabels(dateRange)
       },
       sessions: {
         total: Math.round(24891 * multiplier),
+        current: Math.round(24891 * multiplier),
         change: 8.2,
         trend: generateTrend(830, dateRange, 0.25),
         labels: generateLabels(dateRange)
@@ -245,6 +261,11 @@ export const getAnalyticsData = (propertyName: string | null, dateRange: string 
       avgSessionDuration: {
         total: '3m 42s',
         change: -2.1
+      },
+      revenue: {
+        current: Math.round(45000 * multiplier),
+        change: 8.3,
+        total: Math.round(45000 * multiplier)
       },
       topPages: {
         labels: ['/home', '/about', '/services', '/blog', '/contact'],
@@ -267,12 +288,14 @@ export const getAnalyticsData = (propertyName: string | null, dateRange: string 
   return {
     users: {
       total: Math.round(5247 * multiplier),
+      current: Math.round(5247 * multiplier),
       change: 5.3,
       trend: generateTrend(180, dateRange, 0.15),
       labels: generateLabels(dateRange)
     },
     sessions: {
       total: Math.round(9834 * multiplier),
+      current: Math.round(9834 * multiplier),
       change: 7.1,
       trend: generateTrend(320, dateRange, 0.2),
       labels: generateLabels(dateRange)
@@ -286,6 +309,11 @@ export const getAnalyticsData = (propertyName: string | null, dateRange: string 
     avgSessionDuration: {
       total: '2m 18s',
       change: 1.2
+    },
+    revenue: {
+      current: Math.round(15000 * multiplier),
+      change: 3.7,
+      total: Math.round(15000 * multiplier)
     },
     topPages: {
       labels: ['/demo', '/sample', '/example', '/test', '/placeholder'],

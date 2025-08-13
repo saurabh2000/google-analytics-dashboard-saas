@@ -30,12 +30,22 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Only run organization logic for protected routes, not public pages
+    const isPublicRoute = ['/', '/auth', '/unauthorized'].some(route => 
+      pathname === route || pathname.startsWith(route)
+    )
+    
+    if (isPublicRoute) {
+      setLoading(false)
+      return
+    }
+    
     if (status === 'authenticated' && session?.user?.email) {
       fetchUserOrganizations()
     } else if (status === 'unauthenticated') {
       setLoading(false)
     }
-  }, [session?.user?.email, status])
+  }, [session?.user?.email, status, pathname])
 
   const fetchUserOrganizations = async () => {
     try {
@@ -67,7 +77,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
             console.log('New organization created:', newOrg)
             setOrganizations([newOrg.organization])
             setCurrentOrganization(newOrg.organization)
-            router.push(`/org/${newOrg.organization.slug}/dashboard`)
+            router.push(`/tenant/${newOrg.organization.slug}/dashboard`)
             return
           } else {
             const errorData = await createResponse.json()
@@ -79,7 +89,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         
         // Set current organization from URL or default to first one
         const pathSegments = pathname.split('/')
-        const orgSlugIndex = pathSegments.indexOf('org')
+        const orgSlugIndex = pathSegments.indexOf('tenant')
         const urlOrgSlug = orgSlugIndex !== -1 ? pathSegments[orgSlugIndex + 1] : null
         
         if (urlOrgSlug) {
@@ -88,13 +98,13 @@ export function TenantProvider({ children }: { children: ReactNode }) {
             setCurrentOrganization(org)
           } else {
             // Redirect to valid organization
-            router.push(`/org/${data.organizations[0].slug}/dashboard`)
+            router.push(`/tenant/${data.organizations[0].slug}/dashboard`)
           }
         } else if (data.organizations.length > 0) {
           // No organization in URL, redirect to first organization
           setCurrentOrganization(data.organizations[0])
-          if (!pathname.startsWith('/org/')) {
-            router.push(`/org/${data.organizations[0].slug}/dashboard`)
+          if (!pathname.startsWith('/tenant/')) {
+            router.push(`/tenant/${data.organizations[0].slug}/dashboard`)
           }
         }
       } else {
@@ -114,7 +124,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     if (org) {
       setCurrentOrganization(org)
       // Update URL to reflect new organization
-      const newPath = pathname.replace(/\/org\/[^\/]+/, `/org/${org.slug}`)
+      const newPath = pathname.replace(/\/tenant\/[^\/]+/, `/tenant/${org.slug}`)
       router.push(newPath)
     }
   }

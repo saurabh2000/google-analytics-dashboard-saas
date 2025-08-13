@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Authentication Data</title>
+</head>
+<body>
+    <h1>Clear Authentication Data</h1>
+    <p>Click the button below to clear all authentication data from your browser:</p>
+    <button onclick="clearAuth()">Clear All Auth Data</button>
+    <div id="status"></div>
+
+    <script>
+        function clearAuth() {
+            const status = document.getElementById('status');
+            
+            // Clear localStorage
+            localStorage.clear();
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            
+            // Clear IndexedDB (if used)
+            if (window.indexedDB) {
+                indexedDB.databases().then(databases => {
+                    databases.forEach(db => {
+                        indexedDB.deleteDatabase(db.name);
+                    });
+                });
+            }
+            
+            // Clear all cookies for this domain
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            status.innerHTML = '<p style="color: green;">✅ All authentication data cleared! Please close your browser and try signing in again.</p>';
+        }
+    </script>
+</body>
+</html>

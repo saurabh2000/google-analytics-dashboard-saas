@@ -116,6 +116,97 @@ export class GoogleAnalyticsService {
   }
 
   /**
+   * Get funnel data from Google Analytics 4
+   * This creates a basic funnel using page views and events
+   */
+  async getFunnelData(propertyId: string, dateRange: string = '30d'): Promise<any> {
+    try {
+      const startDate = this.getStartDate(dateRange)
+      const endDate = 'today'
+
+      // Step 1: Landing pages (page_view events)
+      const landingPageReport = await this.runReport(propertyId, {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'pagePath' }],
+        metrics: [
+          { name: 'screenPageViews' },
+          { name: 'sessions' },
+          { name: 'activeUsers' }
+        ],
+        orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
+        limit: 20
+      })
+
+      // Step 2: Engagement events (scroll, file_download, etc.)
+      const engagementReport = await this.runReport(propertyId, {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'eventName' }],
+        metrics: [
+          { name: 'eventCount' },
+          { name: 'activeUsers' }
+        ],
+        dimensionFilter: {
+          filter: {
+            fieldName: 'eventName',
+            inListFilter: {
+              values: ['scroll', 'click', 'file_download', 'video_start', 'engagement_time_msec']
+            }
+          }
+        },
+        orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }]
+      })
+
+      // Step 3: Conversion events
+      const conversionReport = await this.runReport(propertyId, {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'eventName' }],
+        metrics: [
+          { name: 'eventCount' },
+          { name: 'activeUsers' }
+        ],
+        dimensionFilter: {
+          filter: {
+            fieldName: 'eventName',
+            inListFilter: {
+              values: ['form_start', 'form_submit', 'sign_up', 'purchase', 'generate_lead']
+            }
+          }
+        },
+        orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }]
+      })
+
+      // Step 4: Traffic sources for the funnel
+      const trafficSourceReport = await this.runReport(propertyId, {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [
+          { name: 'sessionDefaultChannelGroup' },
+          { name: 'sessionSource' }
+        ],
+        metrics: [
+          { name: 'sessions' },
+          { name: 'activeUsers' },
+          { name: 'bounceRate' }
+        ],
+        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+        limit: 10
+      })
+
+      return {
+        landingPages: landingPageReport,
+        engagementEvents: engagementReport,
+        conversionEvents: conversionReport,
+        trafficSources: trafficSourceReport,
+        dateRange: `${startDate} to ${endDate}`,
+        isRealData: true
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch Google Analytics funnel data:', error)
+      throw new Error('Unable to fetch funnel data from Google Analytics')
+    }
+  }
+
+  /**
    * Get analytics data for a specific property and date range
    */
   async getAnalyticsData(propertyId: string, dateRange: string = '30d'): Promise<AnalyticsData> {
@@ -389,6 +480,45 @@ export async function getGoogleAnalyticsData(
     return await googleAnalyticsService.getAnalyticsData(propertyId, dateRange)
   } catch (error) {
     console.error('Failed to get Google Analytics data:', error)
+    throw error
+  }
+}
+
+/**
+ * Server-side function to get Google Analytics funnel data
+ */
+export async function getGoogleAnalyticsFunnelData(
+  propertyId: string, 
+  dateRange: string = '30d'
+): Promise<any> {
+  try {
+    console.log('🔍 GA Funnel Service: Getting server session...')
+    const session = await getServerSession(authOptions)
+    console.log('🔍 GA Funnel Service: Session status:', {
+      hasSession: !!session,
+      hasAccessToken: !!session?.accessToken,
+      user: session?.user?.email || 'No user'
+    })
+    
+    if (!session?.accessToken) {
+      throw new Error('No valid session or access token found')
+    }
+
+    console.log('🔍 GA Funnel Service: Setting access token...')
+    await googleAnalyticsService.setAccessToken(
+      session.accessToken as string,
+      session.refreshToken as string
+    )
+
+    console.log('🔍 GA Funnel Service: Calling getFunnelData()...')
+    const funnelData = await googleAnalyticsService.getFunnelData(propertyId, dateRange)
+    console.log('🔍 GA Funnel Service: Retrieved funnel data successfully')
+    return funnelData
+  } catch (error) {
+    console.error('❌ GA Funnel Service: Failed to get Google Analytics funnel data:', {
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined
+    })
     throw error
   }
 }
