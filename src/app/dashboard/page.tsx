@@ -35,7 +35,7 @@ export default function Dashboard() {
   const [isRealData, setIsRealData] = useState(false)
   const [connectedProperty, setConnectedProperty] = useState<string | null>(null)
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [lastUpdated, setLastUpdated] = useState<Date>(() => new Date(0)) // Initialize with epoch to avoid hydration mismatch
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showCustomizationPanel, setShowCustomizationPanel] = useState(false)
   const [enabledKpiCards, setEnabledKpiCards] = useState<string[]>([
@@ -129,7 +129,8 @@ export default function Dashboard() {
         // Update real-time users with some variation
         const baseUsers = connectedProperty === 'E-commerce Site' ? 147 : 
                           connectedProperty === 'My Website' ? 23 : 8
-        const variation = Math.floor(Math.random() * 10) - 5 // -5 to +5
+        // Use timestamp-based variation for consistency during SSR/hydration
+        const variation = Math.floor((Date.now() / 10000) % 10) - 5 // -5 to +5 based on timestamp
         const newRealTimeUsers = Math.max(1, baseUsers + variation)
         
         return {
@@ -150,7 +151,7 @@ export default function Dashboard() {
       const dashboardId = `dashboard-${sessionWithId.user.id || 'anonymous'}`
       
       collaborationManager.connect({
-        id: sessionWithId.user.id || Date.now().toString(),
+        id: sessionWithId.user.id || 'anonymous',
         name: session.user.name || 'Anonymous User',
         email: session.user.email || 'anonymous@example.com',
         avatar: session.user.image || undefined
@@ -277,12 +278,13 @@ export default function Dashboard() {
               <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
                 <div className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-yellow-400 animate-pulse' : isRealData ? 'bg-green-400' : 'bg-blue-400'}`}></div>
                 <span>
-                  {isRealData ? 'Real Data' : 'Demo Mode'} - Updated {lastUpdated.toLocaleTimeString('en-US', { 
+                  {isRealData ? 'Real Data' : 'Demo Mode'}
+                  {typeof window !== 'undefined' && ` - Updated ${lastUpdated.toLocaleTimeString('en-US', { 
                     hour12: false, 
                     hour: '2-digit', 
                     minute: '2-digit', 
                     second: '2-digit' 
-                  })}
+                  })}`}
                 </span>
               </div>
               
@@ -414,7 +416,7 @@ export default function Dashboard() {
               
               const getValue = (cardId: string) => {
                 switch (cardId) {
-                  case 'realtime': return Math.floor(Math.random() * 50) + 10
+                  case 'realtime': return analyticsData?.realTimeUsers || 8
                   case 'new-users': return analyticsData?.users?.current ? Math.floor(analyticsData.users.current * 0.6) : 1234
                   case 'returning-users': return analyticsData?.users?.current ? Math.floor(analyticsData.users.current * 0.4) : 856
                   default: return 0
@@ -427,13 +429,13 @@ export default function Dashboard() {
                   id={cardConfig.id}
                   title={cardConfig.name}
                   value={getValue(cardId)}
-                  change={Math.random() * 20 - 10}
+                  change={5.3}
                   icon={getIconComponent(cardId)}
                   color={cardConfig.color as any}
-                  progress={Math.random() * 100}
+                  progress={65}
                   goal={getValue(cardId) * 1.5}
                   description={`${cardConfig.name} metrics and trends`}
-                  trend={Array.from({length: 7}, () => Math.random() * 100)}
+                  trend={[45, 52, 48, 61, 55, 67, 65]}
                   isCustomizable={true}
                   onRemove={handleRemoveKpiCard}
                   analyticsData={analyticsData}
