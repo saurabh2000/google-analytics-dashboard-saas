@@ -55,6 +55,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!session?.user) {
+      setLoading(false) // Stop loading if no session
       router.push('/auth/signin')
       return
     }
@@ -76,9 +77,61 @@ export default function ProfilePage() {
               reports: true
             }
           })
+        } else {
+          console.error('Profile API returned error:', response.status)
+          // Set basic profile data from session as fallback
+          setProfile({
+            id: session.user.email || 'unknown',
+            name: session.user.name,
+            email: session.user.email,
+            image: session.user.image,
+            role: 'USER',
+            tenantId: null,
+            tenant: null,
+            isActive: true,
+            lastLoginAt: null,
+            createdAt: new Date()
+          })
+          setFormData({
+            name: session.user.name || '',
+            email: session.user.email || '',
+            timezone: 'UTC',
+            locale: 'en',
+            notifications: {
+              email: true,
+              inApp: true,
+              reports: true
+            }
+          })
         }
       } catch (error) {
         console.error('Failed to fetch profile:', error)
+        // Set basic profile data from session as fallback
+        if (session.user) {
+          setProfile({
+            id: session.user.email || 'unknown',
+            name: session.user.name,
+            email: session.user.email,
+            image: session.user.image,
+            role: 'USER',
+            tenantId: null,
+            tenant: null,
+            isActive: true,
+            lastLoginAt: null,
+            createdAt: new Date()
+          })
+          setFormData({
+            name: session.user.name || '',
+            email: session.user.email || '',
+            timezone: 'UTC',
+            locale: 'en',
+            notifications: {
+              email: true,
+              inApp: true,
+              reports: true
+            }
+          })
+        }
       } finally {
         setLoading(false)
       }

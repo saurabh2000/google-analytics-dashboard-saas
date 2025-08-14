@@ -1,23 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SignJWT } from 'jose'
 import { cookies } from 'next/headers'
+import { logger, sanitizeForLog } from '@/lib/logger'
 
-const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || 'your-secret-key')
+const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET)
+
+if (!process.env.NEXTAUTH_SECRET) {
+  logger.error('NEXTAUTH_SECRET environment variable is required')
+  throw new Error('NEXTAUTH_SECRET environment variable is required')
+}
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
     
-    console.log('Admin login attempt:', { email, passwordLength: password?.length })
+    // Input validation
+    if (!email || !password) {
+      return NextResponse.json({
+        success: false,
+        message: 'Email and password are required'
+      }, { status: 400 })
+    }
+
+    // Rate limiting check (basic implementation)
+    const ip = request.headers.get('x-forwarded-for') || 'unknown'
+    
+    // Get admin credentials from environment
+    const adminEmail = process.env.ADMIN_EMAIL
+    const adminPassword = process.env.ADMIN_PASSWORD
+
+    if (!adminEmail || !adminPassword) {
+      logger.error('Admin credentials not configured in environment variables')
+      return NextResponse.json({
+        success: false,
+        message: 'Server configuration error'
+      }, { status: 500 })
+    }
     
     // Validate admin credentials
-    if (email === 'saurabh2000@gmail.com' && password === 'Admin@2025!') {
-      console.log('✅ Admin credentials valid')
+    if (email === adminEmail && password === adminPassword) {
       
       // Create JWT token
       const token = await new SignJWT({
         sub: 'admin-001',
-        email: 'saurabh2000@gmail.com',
+        email: adminEmail,
         name: 'Admin User',
         role: 'SUPER_ADMIN',
         isAdmin: true,
@@ -36,32 +62,40 @@ export async function POST(request: NextRequest) {
         maxAge: 24 * 60 * 60 // 24 hours
       })
       
-      console.log('✅ Admin token created and set')
+      // Log successful login (without sensitive details)
+      logger.info('Admin login successful', sanitizeForLog({ email: email.substring(0, 3) + '***', ip }))
       
       return NextResponse.json({
         success: true,
         message: 'Admin login successful',
         user: {
           id: 'admin-001',
-          email: 'saurabh2000@gmail.com',
+          email: adminEmail,
           name: 'Admin User',
           role: 'SUPER_ADMIN',
           isAdmin: true
         }
       })
     } else {
-      console.log('❌ Invalid admin credentials')
+      // Log failed attempt (without sensitive details)
+      logger.warn('Failed admin login attempt', sanitizeForLog({ 
+        ip, 
+        email: email.substring(0, 3) + '***',
+        timestamp: new Date().toISOString()
+      }))
       return NextResponse.json({
         success: false,
         message: 'Invalid credentials'
       }, { status: 401 })
     }
   } catch (error) {
-    console.error('💥 Admin login error:', error)
+    logger.error('Admin login error', sanitizeForLog({ 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      ip
+    }))
     return NextResponse.json({
       success: false,
-      message: 'Server error',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Server error'
     }, { status: 500 })
   }
 }

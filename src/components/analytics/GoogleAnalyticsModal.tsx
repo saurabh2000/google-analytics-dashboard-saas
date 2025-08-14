@@ -241,6 +241,7 @@ export default function GoogleAnalyticsModal({
                           <div className="flex items-center">
                             <input
                               type="radio"
+                              id={`property-${property.propertyId}`}
                               name="property"
                               value={property.propertyId}
                               checked={selectedProperty === property.propertyId}

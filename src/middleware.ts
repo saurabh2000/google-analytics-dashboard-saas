@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { validateEnvironment } from '@/lib/env-validation'
+import { logger } from '@/lib/logger'
+
+// Validate environment on module load
+let environmentValidated = false
+if (!environmentValidated) {
+  const validation = validateEnvironment()
+  if (!validation.isValid) {
+    logger.error('Environment validation failed in middleware')
+    validation.errors.forEach(error => logger.error(error))
+  }
+  environmentValidated = true
+}
 
 // Define role hierarchy
 const roleHierarchy = {

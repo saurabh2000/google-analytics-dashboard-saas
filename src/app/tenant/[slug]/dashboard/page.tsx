@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
+import { Users, Activity, Eye, Clock } from 'lucide-react'
 import { TenantProvider, FeatureGate, useTenantBranding } from '@/components/tenant/TenantProvider'
 import TenantDashboardHeader from '@/components/tenant/TenantDashboardHeader'
 import LineChart from '@/components/charts/LineChart'
@@ -9,6 +10,11 @@ import BarChart from '@/components/charts/BarChart'
 import PieChart from '@/components/charts/PieChart'
 import DrillDownChart from '@/components/charts/DrillDownChart'
 import KpiCard from '@/components/dashboard/KpiCard'
+import MagicKpiCard from '@/components/dashboard/MagicKpiCard'
+import MagicEventsCard from '@/components/dashboard/MagicEventsCard'
+import MagicRealtimeChart from '@/components/dashboard/MagicRealtimeChart'
+import MagicCard from '@/components/magicui/magic-card'
+import SparklesButton from '@/components/magicui/sparkles-button'
 import CustomizationPanel from '@/components/dashboard/CustomizationPanel'
 import UserJourneyFlow from '@/components/analytics/UserJourneyFlow'
 import JourneySourceSelector from '@/components/analytics/JourneySourceSelector'
@@ -113,23 +119,76 @@ function TenantDashboard() {
 
       {/* Main Content */}
       <main className="px-4 sm:px-6 lg:px-8 py-8">
-        {/* KPI Cards - Always shown for basic analytics */}
+        {/* KPI Cards with Magic UI - Always shown for basic analytics */}
         <FeatureGate feature="basic-analytics">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {enabledKpiCards.map(cardId => {
               const cardConfig = getAvailableKpiCards().find(card => card.id === cardId)
               if (!cardConfig) return null
               
+              // Generate trend data based on the card type
+              const getTrendData = () => {
+                if (!analyticsData) return []
+                switch (cardId) {
+                  case 'total-users':
+                    return analyticsData.users.trend.slice(-7)
+                  case 'sessions':
+                    return analyticsData.sessions.trend.slice(-7)
+                  case 'page-views':
+                    return analyticsData.pageViews.trend.slice(-7)
+                  case 'avg-session':
+                    return [3.2, 3.5, 3.1, 3.8, 3.6, 3.9, 4.2]
+                  default:
+                    return []
+                }
+              }
+              
+              // Get the appropriate value and change
+              const getValue = () => {
+                if (!analyticsData) return 0
+                switch (cardId) {
+                  case 'total-users':
+                    return analyticsData.users.current
+                  case 'sessions':
+                    return analyticsData.sessions.current
+                  case 'page-views':
+                    return analyticsData.pageViews.current
+                  case 'avg-session':
+                    return analyticsData.avgSessionDuration.current
+                  default:
+                    return 0
+                }
+              }
+              
+              const getChange = () => {
+                if (!analyticsData) return 0
+                switch (cardId) {
+                  case 'total-users':
+                    return analyticsData.users.change
+                  case 'sessions':
+                    return analyticsData.sessions.change
+                  case 'page-views':
+                    return analyticsData.pageViews.change
+                  case 'avg-session':
+                    return analyticsData.avgSessionDuration.change
+                  default:
+                    return 0
+                }
+              }
+              
               return (
-                <KpiCard
+                <MagicKpiCard
                   key={cardId}
                   id={cardConfig.id}
-                  name={cardConfig.name}
+                  title={cardConfig.name}
+                  value={getValue()}
+                  change={getChange()}
                   icon={cardConfig.icon}
                   color={cardConfig.color as 'blue' | 'green' | 'purple' | 'orange'}
-                  analyticsData={analyticsData}
-                  onRemove={handleRemoveKpiCard}
                   isCustomizable={true}
+                  onRemove={handleRemoveKpiCard}
+                  trend={getTrendData()}
+                  suffix={cardId === 'avg-session' ? 's' : ''}
                 />
               )
             })}
@@ -154,11 +213,28 @@ function TenantDashboard() {
           </div>
         </FeatureGate>
 
+        {/* Real-time Analytics and Team Activity */}
+        <FeatureGate feature="basic-analytics">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="lg:col-span-2">
+              <MagicRealtimeChart
+                propertyName={connectedProperty}
+                isRealData={isRealData}
+              />
+            </div>
+            <div className="lg:col-span-1">
+              <MagicEventsCard
+                isRealData={isRealData}
+              />
+            </div>
+          </div>
+        </FeatureGate>
+
         {/* Basic Charts - Always shown */}
         <FeatureGate feature="basic-analytics">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {/* Users Over Time Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <MagicCard gradientColor="rgba(59, 130, 246, 0.1)" gradientSize={400}>
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">Users Over Time</h3>
@@ -190,10 +266,10 @@ function TenantDashboard() {
                   </div>
                 </div>
               )}
-            </div>
+            </MagicCard>
 
             {/* Top Pages Bar Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <MagicCard gradientColor="rgba(34, 197, 94, 0.1)" gradientSize={400}>
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">Top Pages</h3>
@@ -219,7 +295,7 @@ function TenantDashboard() {
                   </div>
                 </div>
               )}
-            </div>
+            </MagicCard>
           </div>
         </FeatureGate>
 

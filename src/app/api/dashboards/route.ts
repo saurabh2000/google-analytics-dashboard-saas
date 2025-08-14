@@ -2,37 +2,53 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { withErrorHandler, ValidationError, AuthenticationError } from '@/lib/error-handler'
+import { schemas } from '@/lib/validation-schemas'
+import { logger, sanitizeForLog } from '@/lib/logger'
 
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    
-    // Get organization ID from query params
-    const { searchParams } = new URL(req.url)
-    const organizationId = searchParams.get('organizationId')
-    
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 })
-    }
+export const GET = withErrorHandler(async (req: NextRequest) => {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) {
+    throw new AuthenticationError('Unauthorized')
+  }
+  
+  // Get and validate query params
+  const { searchParams } = new URL(req.url)
+  const queryData = {
+    organizationId: searchParams.get('organizationId'),
+    page: searchParams.get('page'),
+    limit: searchParams.get('limit'),
+    sortBy: searchParams.get('sortBy'),
+    sortOrder: searchParams.get('sortOrder') as 'asc' | 'desc'
+  }
+  
+  const validation = schemas.dashboardQuery.safeParse(queryData)
+  if (!validation.success) {
+    throw new ValidationError('Invalid query parameters', validation.error.issues)
+  }
+  
+  const { organizationId } = validation.data
+  
+  if (!organizationId) {
+    throw new ValidationError('Organization ID is required')
+  }
 
-    // Get user from database
-    let user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+  // Get user from database
+  let user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  })
+
+  // Create user if not exists
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
+      }
     })
-
-    // Create user if not exists
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: session.user.email,
-          name: session.user.name,
-          image: session.user.image,
-        }
-      })
-    }
+    logger.info('Created new user', sanitizeForLog({ userId: user.id, email: user.email }))
+  }
 
     // Verify user has access to this organization
     const { Client } = await import('pg')
@@ -68,76 +84,82 @@ export async function GET(req: NextRequest) {
 
     await client.end()
 
+    logger.info('Dashboards fetched successfully', sanitizeForLog({ 
+      organizationId, 
+      dashboardCount: dashboards.rows.length,
+      userId: user.id 
+    }))
+
     return NextResponse.json({ 
       dashboards: dashboards.rows,
       userRole: memberCheck.rows[0].role 
     })
-  } catch (error) {
-    console.error('Error fetching dashboards:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+})
+
+export const POST = withErrorHandler(async (req: NextRequest) => {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) {
+    throw new AuthenticationError('Unauthorized')
   }
-}
 
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const body = await req.json()
+  
+  // Validate request body
+  const validation = schemas.createDashboard.safeParse(body)
+  if (!validation.success) {
+    throw new ValidationError('Invalid dashboard data', validation.error.issues)
+  }
+  
+  const { name, description, layout, widgets, isDefault, organizationId } = validation.data
 
-    const body = await req.json()
-    const { name, description, layout, widgets, isDefault } = body
+  // Get or create user
+  let user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  })
 
-    // Validate required fields
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
-    }
-
-    // Get or create user
-    let user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: session.user.email,
-          name: session.user.name,
-          image: session.user.image,
-        }
-      })
-    }
-
-    // If setting as default, unset other defaults
-    if (isDefault) {
-      await prisma.dashboard.updateMany({
-        where: { 
-          userId: user.id,
-          isDefault: true 
-        },
-        data: { isDefault: false }
-      })
-    }
-
-    const dashboard = await prisma.dashboard.create({
+  if (!user) {
+    user = await prisma.user.create({
       data: {
-        userId: user.id,
-        name,
-        description: description || '',
-        layout: layout || { cols: 12, rowHeight: 100, breakpoints: { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 } },
-        settings: {},
-        isDefault: isDefault || false,
-        isPublic: false,
-        shareToken: null,
-      },
-      include: {
-        widgets: true
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
       }
     })
-
-    return NextResponse.json({ dashboard }, { status: 201 })
-  } catch (error) {
-    console.error('Error creating dashboard:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+
+  // If setting as default, unset other defaults
+  if (isDefault) {
+    await prisma.dashboard.updateMany({
+      where: { 
+        userId: user.id,
+        isDefault: true 
+      },
+      data: { isDefault: false }
+    })
+  }
+
+  const dashboard = await prisma.dashboard.create({
+    data: {
+      userId: user.id,
+      organizationId,
+      name,
+      description: description || '',
+      layout: layout || { cols: 12, rowHeight: 100, breakpoints: { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 } },
+      settings: {},
+      isDefault: isDefault || false,
+      isPublic: false,
+      shareToken: null,
+    },
+    include: {
+      widgets: true
+    }
+  })
+
+  logger.info('Dashboard created successfully', sanitizeForLog({
+    dashboardId: dashboard.id,
+    name: dashboard.name,
+    userId: user.id
+  }))
+
+  return NextResponse.json({ dashboard }, { status: 201 })
+})

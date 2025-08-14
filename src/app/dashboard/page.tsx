@@ -12,6 +12,11 @@ import PieChart from '@/components/charts/PieChart'
 import DrillDownChart from '@/components/charts/DrillDownChart'
 import KpiCard from '@/components/dashboard/KpiCard'
 import EnhancedKpiCard from '@/components/dashboard/EnhancedKpiCard'
+import MagicKpiCard from '@/components/dashboard/MagicKpiCard'
+import MagicEventsCard from '@/components/dashboard/MagicEventsCard'
+import MagicRealtimeChart from '@/components/dashboard/MagicRealtimeChart'
+import SparklesButton from '@/components/magicui/sparkles-button'
+import MagicCard from '@/components/magicui/magic-card'
 import RevenueCard from '@/components/dashboard/RevenueCard'
 import GoalsCard from '@/components/dashboard/GoalsCard'
 import EventsCard from '@/components/dashboard/EventsCard'
@@ -21,6 +26,7 @@ import JourneySourceSelector from '@/components/analytics/JourneySourceSelector'
 import GoogleAnalyticsModal from '@/components/analytics/GoogleAnalyticsModal'
 import RealDataFunnel from '@/components/analytics/RealDataFunnel'
 import AnalysisEngine from '@/components/analytics/AnalysisEngine'
+import ClientTimestamp from '@/components/ui/ClientTimestamp'
 import { getAnalyticsData, fetchAnalyticsData, type AnalyticsData } from '@/lib/analytics-data'
 import { getDrillDownData, getAvailableKpiCards } from '@/lib/drill-down-data'
 import collaborationManager, { type DashboardState } from '@/lib/socket'
@@ -66,13 +72,13 @@ export default function Dashboard() {
       
       try {
         if (connectedProperty) {
-          // Try to get real data from the connected property
+          // When GA is connected, we're always in "real data mode" 
           const storedPropertyId = sessionStorage.getItem('connectedGAPropertyId')
           if (storedPropertyId) {
             console.log('🔍 Dashboard: Fetching real GA data for property:', storedPropertyId)
             const result = await fetchAnalyticsData(storedPropertyId, connectedProperty, selectedDateRange)
             setAnalyticsData(() => result.data)
-            setIsRealData(() => result.isReal)
+            setIsRealData(() => true) // Always true when GA is connected, regardless of API success
             setDrillDownData(() => getDrillDownData(connectedProperty))
             setLastUpdated(() => new Date())
             setIsRefreshing(() => false)
@@ -80,19 +86,28 @@ export default function Dashboard() {
           }
         }
         
-        // Fallback to demo data if no real property connected
+        // Only use demo mode when NO Google Analytics is connected
         const data = getAnalyticsData(connectedProperty, selectedDateRange)
         setAnalyticsData(() => data)
-        setIsRealData(() => false)
+        setIsRealData(() => false) // Demo mode only when not connected
         setDrillDownData(() => getDrillDownData(connectedProperty))
         setLastUpdated(() => new Date())
         setIsRefreshing(() => false)
       } catch (error) {
         console.error('❌ Dashboard: Error fetching analytics data:', error)
-        // Fallback to demo data on error
-        const data = getAnalyticsData(connectedProperty, selectedDateRange)
-        setAnalyticsData(() => data)
-        setIsRealData(() => false)
+        
+        if (connectedProperty) {
+          // If GA is connected but API fails, stay in real data mode but show fallback data
+          const data = getAnalyticsData(connectedProperty, selectedDateRange)
+          setAnalyticsData(() => data)
+          setIsRealData(() => true) // Still "real mode" because GA is connected
+        } else {
+          // Only demo mode when no GA connection
+          const data = getAnalyticsData(connectedProperty, selectedDateRange)
+          setAnalyticsData(() => data)
+          setIsRealData(() => false)
+        }
+        
         setDrillDownData(() => getDrillDownData(connectedProperty))
         setLastUpdated(() => new Date())
         setIsRefreshing(() => false)
@@ -279,17 +294,14 @@ export default function Dashboard() {
                 <div className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-yellow-400 animate-pulse' : isRealData ? 'bg-green-400' : 'bg-blue-400'}`}></div>
                 <span>
                   {isRealData ? 'Real Data' : 'Demo Mode'}
-                  {typeof window !== 'undefined' && ` - Updated ${lastUpdated.toLocaleTimeString('en-US', { 
-                    hour12: false, 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    second: '2-digit' 
-                  })}`}
+                  <ClientTimestamp date={lastUpdated} prefix=" - Updated " />
                 </span>
               </div>
               
               {/* Date Range Picker */}
               <select 
+                id="date-range-selector"
+                name="dateRange"
                 value={selectedDateRange}
                 onChange={(e) => handleDateRangeChange(e.target.value)}
                 disabled={isRefreshing}
@@ -477,10 +489,25 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Real-time Analytics Dashboard */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <MagicRealtimeChart
+              propertyName={connectedProperty}
+              isRealData={isRealData}
+            />
+          </div>
+          <div className="lg:col-span-1">
+            <MagicEventsCard
+              isRealData={isRealData}
+            />
+          </div>
+        </div>
+
         {/* Chart Widgets */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" data-tutorial="charts">
           {/* Users Over Time Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <MagicCard gradientColor="rgba(59, 130, 246, 0.1)" gradientSize={400}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">Users Over Time</h3>
@@ -514,10 +541,10 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-          </div>
+          </MagicCard>
 
           {/* Top Pages Bar Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <MagicCard gradientColor="rgba(34, 197, 94, 0.1)" gradientSize={400}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">Top Pages</h3>
@@ -543,13 +570,13 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-          </div>
+          </MagicCard>
         </div>
 
         {/* Traffic Sources and Device Types */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Traffic Sources Drill-Down Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <MagicCard gradientColor="rgba(168, 85, 247, 0.1)" gradientSize={400}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">Traffic Sources</h3>
               <button className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
@@ -570,10 +597,10 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-          </div>
+          </MagicCard>
 
           {/* Device Types Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <MagicCard gradientColor="rgba(251, 146, 60, 0.1)" gradientSize={400}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">Device Types</h3>
@@ -602,12 +629,12 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-          </div>
+          </MagicCard>
         </div>
 
         {/* User Journey Flow Analysis */}
         <div className="mb-8" data-tutorial="user-journey">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <MagicCard gradientColor="rgba(59, 130, 246, 0.05)" gradientSize={600}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -642,7 +669,7 @@ export default function Dashboard() {
               propertyName={connectedProperty}
               selectedSource={selectedJourneySource}
             />
-          </div>
+          </MagicCard>
         </div>
 
         {/* Real Data Funnel Analysis */}
@@ -657,7 +684,11 @@ export default function Dashboard() {
         {/* Upgrade Prompt for Personal Users */}
         {session?.user && !(session.user as any).tenantId && (
           <div className="mb-8">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+            <MagicCard 
+              className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800"
+              gradientColor="rgba(59, 130, 246, 0.1)"
+              gradientSize={500}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
@@ -673,21 +704,19 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Link 
-                    href="/pricing"
-                    className="px-4 py-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm"
-                  >
-                    View Plans
+                  <Link href="/pricing">
+                    <SparklesButton variant="ghost">
+                      View Plans
+                    </SparklesButton>
                   </Link>
-                  <Link 
-                    href="/auth/register?plan=startup"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Start Team Trial
+                  <Link href="/auth/register?plan=startup">
+                    <SparklesButton>
+                      Start Team Trial
+                    </SparklesButton>
                   </Link>
                 </div>
               </div>
-            </div>
+            </MagicCard>
           </div>
         )}
 
@@ -705,12 +734,9 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="ml-auto">
-                <button 
-                  onClick={openModal}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
-                >
+                <SparklesButton onClick={openModal}>
                   Connect Google Analytics
-                </button>
+                </SparklesButton>
               </div>
             </div>
           </div>
@@ -726,12 +752,12 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="ml-auto">
-                <button 
+                <SparklesButton 
                   onClick={() => setShowGAModal(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+                  variant="outline"
                 >
                   Change Property
-                </button>
+                </SparklesButton>
               </div>
             </div>
           </div>

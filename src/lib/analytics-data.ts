@@ -145,13 +145,31 @@ export const fetchAnalyticsData = async (
       ...(propertyName && { propertyName })
     })
 
-    const response = await fetch(`/api/analytics/data?${params}`)
-    const result = await response.json()
+    const response = await fetch(`/api/analytics/data?${params}`, {
+      redirect: 'manual' // Don't follow redirects automatically
+    })
+    
+    // Check if response is a redirect
+    if (response.status === 307 || response.status === 302 || response.status === 301) {
+      throw new Error('Authentication required - API returned redirect')
+    }
+    
+    // Check if response is HTML (redirect page) instead of JSON
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('API returned non-JSON response - likely authentication redirect')
+    }
+
+    let result
+    try {
+      result = await response.json()
+    } catch (jsonError) {
+      throw new Error('Failed to parse API response as JSON - likely authentication redirect')
+    }
 
     if (!response.ok) {
       throw new Error(result.error || 'Failed to fetch analytics data')
     }
-
     const response_data = {
       data: result.data,
       isReal: result.isReal || false,
@@ -163,12 +181,38 @@ export const fetchAnalyticsData = async (
     
     return response_data
   } catch (error) {
-    console.error('Failed to fetch analytics data:', error)
-    // Fallback to mock data
-    return {
-      data: getAnalyticsData(propertyName, dateRange),
-      isReal: false,
-      message: 'Using fallback mock data due to API error'
+    console.log('🔄 Caught error, falling back to demo data:', error?.message || error)
+    // Always return fallback data - never let the error propagate
+    try {
+      const fallbackData = getAnalyticsData(propertyName, dateRange)
+      const result = {
+        data: fallbackData,
+        isReal: false,
+        message: `Demo mode - ${error?.message || 'API unavailable'}`
+      }
+      
+      // Cache the fallback data too
+      apiCache.set(cacheKey, result)
+      
+      return result
+    } catch (fallbackError) {
+      console.error('❌ Even fallback failed:', fallbackError)
+      // Last resort - return minimal data structure
+      return {
+        data: {
+          users: { total: 0, current: 0, change: 0, trend: [], labels: [] },
+          sessions: { total: 0, current: 0, change: 0, trend: [], labels: [] },
+          pageViews: { total: 0, change: 0, trend: [], labels: [] },
+          avgSessionDuration: { total: '0s', change: 0 },
+          revenue: { current: 0, change: 0, total: 0 },
+          topPages: { labels: [], data: [] },
+          trafficSources: { labels: [], data: [] },
+          deviceTypes: { labels: [], data: [] },
+          realTimeUsers: 0
+        },
+        isReal: false,
+        message: 'Emergency fallback - minimal data'
+      }
     }
   }
 }

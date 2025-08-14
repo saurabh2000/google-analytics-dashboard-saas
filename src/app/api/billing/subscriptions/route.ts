@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const stripeService = createStripeService()
     
     // Create or get existing customer
-    let customer = await stripeService.getSubscription(tenantId)
+    const customer = await stripeService.getSubscription(tenantId)
     let customerId: string
 
     if (customer) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Users, Building2, CreditCard, DollarSign } from 'lucide-react'
+import { Users, Building2, CreditCard, DollarSign, TrendingUp, Activity } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, ResponsiveContainer } from 'recharts'
 import MagicKpiCard from '@/components/dashboard/MagicKpiCard'
 import MagicEventsCard from '@/components/dashboard/MagicEventsCard'
@@ -57,7 +57,7 @@ const systemEvents = [
   },
   {
     id: '4',
-    type: 'share',
+    type: 'alert',
     title: 'High API Usage Alert',
     value: 'Acme Corp - 95% quota',
     timestamp: '12 min ago',
@@ -72,12 +72,12 @@ const systemEvents = [
   },
 ]
 
-export default function AdminDashboard() {
+export default function MagicAdminDashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Simulate loading
-    setTimeout(() => setLoading(false), 1000)
+    setTimeout(() => setLoading(false), 500)
   }, [])
 
   const stats = {
@@ -130,12 +130,12 @@ export default function AdminDashboard() {
         <div className="animate-pulse space-y-6">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-gray-200 rounded-lg h-32" />
+              <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-lg h-32" />
             ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-gray-200 rounded-lg h-80" />
+              <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-lg h-80" />
             ))}
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function AdminDashboard() {
           <MagicRealtimeChart propertyName="Platform Analytics" />
         </div>
         <div className="lg:col-span-1">
-          <MagicEventsCard events={systemEvents} />
+          <MagicEventsCard isRealData={false} />
         </div>
       </div>
 
@@ -206,11 +206,22 @@ export default function AdminDashboard() {
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Revenue Growth</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={revenueData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
-              <Line type="monotone" dataKey="mrr" stroke="#8884d8" strokeWidth={2} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="month" stroke="#6b7280" />
+              <YAxis stroke="#6b7280" />
+              <Tooltip 
+                formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']}
+                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                labelStyle={{ color: '#9ca3af' }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="mrr" 
+                stroke="#3b82f6" 
+                strokeWidth={3}
+                dot={{ fill: '#3b82f6', r: 6 }}
+                activeDot={{ r: 8 }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </MagicCard>
@@ -220,12 +231,15 @@ export default function AdminDashboard() {
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">User Growth</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={userGrowthData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="users" fill="#82ca9d" />
-              <Bar dataKey="active" fill="#8884d8" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="month" stroke="#6b7280" />
+              <YAxis stroke="#6b7280" />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                labelStyle={{ color: '#9ca3af' }}
+              />
+              <Bar dataKey="users" fill="#22c55e" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="active" fill="#3b82f6" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </MagicCard>
